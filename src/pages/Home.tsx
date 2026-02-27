@@ -3,23 +3,28 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { eventsSvc } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import {
-  CalendarDays,
-  MapPin,
-  ArrowRight,
-  Globe,
-  Users,
-  Clock,
-} from "lucide-react";
+import { CalendarDays, MapPin, ArrowRight, Globe, Users, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 export default function HomePage() {
   const { user } = useAuth();
+
+  // ✅ ENV (prod/dev)
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || ""; // masalan: http://10.113.31.105:8081/api
+  const FILES_BASE = import.meta.env.VITE_FILES_BASE || "http://10.113.31.105:8081"; // /uploads shu hostda
+
   const [events, setEvents] = useState<any[]>([]);
   const [heroIdx, setHeroIdx] = useState(0);
 
-  // ✅ eventId -> first image url (cover)
+  // ✅ eventId -> first image path (cover)
   const [covers, setCovers] = useState<Record<number, string>>({});
+
+  // ✅ helper: /uploads/... -> http://host/uploads/...
+  const toFileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
+    return `${FILES_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
 
   const heroImages = [
     "/slides/1.png",
@@ -69,9 +74,9 @@ export default function HomePage() {
   useEffect(() => {
     let alive = true;
 
-    eventsSvc
-      .getUpcoming()
-      .then(async (list) => {
+    (async () => {
+      try {
+        const list = await eventsSvc.getUpcoming();
         if (!alive) return;
 
         const arr = Array.isArray(list) ? list : [];
@@ -84,10 +89,9 @@ export default function HomePage() {
             if (!id) return [id, ""] as const;
 
             try {
-              const r = await fetch(`/api/events/${id}/images`);
+              const r = await fetch(`${API_BASE}/events/${id}/images`);
               const imgs = r.ok ? await r.json() : [];
-              const first =
-                Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
               return [id, first] as const;
             } catch {
               return [id, ""] as const;
@@ -102,13 +106,15 @@ export default function HomePage() {
           if (id && url) map[id] = url;
         }
         setCovers(map);
-      })
-      .catch(() => {});
+      } catch {
+        // ignore
+      }
+    })();
 
     return () => {
       alive = false;
     };
-  }, []);
+  }, [API_BASE]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -123,7 +129,6 @@ export default function HomePage() {
     <div
       style={{
         minHeight: "100vh",
-        // ✅ yumshoq umumiy background
         background: "linear-gradient(180deg,#f7f8ff,#eef2ff)",
       }}
     >
@@ -140,13 +145,7 @@ export default function HomePage() {
           backgroundPosition: "center",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-          }}
-        />
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} />
 
         <div
           style={{
@@ -154,8 +153,7 @@ export default function HomePage() {
             width: 600,
             height: 600,
             borderRadius: "50%",
-            background:
-              "radial-gradient(circle,rgba(124,106,247,0.1),transparent 70%)",
+            background: "radial-gradient(circle,rgba(124,106,247,0.1),transparent 70%)",
             top: -200,
             right: -100,
             pointerEvents: "none",
@@ -167,22 +165,14 @@ export default function HomePage() {
             width: 400,
             height: 400,
             borderRadius: "50%",
-            background:
-              "radial-gradient(circle,rgba(240,98,146,0.07),transparent 70%)",
+            background: "radial-gradient(circle,rgba(240,98,146,0.07),transparent 70%)",
             bottom: -100,
             left: -50,
             pointerEvents: "none",
           }}
         />
 
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
+        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <div
             style={{
               display: "flex",
@@ -216,8 +206,8 @@ export default function HomePage() {
                 lineHeight: 1.75,
               }}
             >
-              Konsertlar, forumlar, ko'rgazmalar — barchasi bir platformada.
-              Ro'yxatdan o'ting va sevimli tadbirlaringizni qoldirmang.
+              Konsertlar, forumlar, ko'rgazmalar — barchasi bir platformada. Ro'yxatdan o'ting va
+              sevimli tadbirlaringizni qoldirmang.
             </p>
 
             <div
@@ -232,11 +222,7 @@ export default function HomePage() {
               <Link
                 to="/events"
                 className="btn btn-primary"
-                style={{
-                  textDecoration: "none",
-                  padding: "13px 30px",
-                  fontSize: 18,
-                }}
+                style={{ textDecoration: "none", padding: "13px 30px", fontSize: 18 }}
               >
                 Tadbirlar <ArrowRight size={16} />
               </Link>
@@ -245,11 +231,7 @@ export default function HomePage() {
                 <Link
                   to="/register"
                   className="btn btn-ghost"
-                  style={{
-                    textDecoration: "none",
-                    padding: "13px 30px",
-                    fontSize: 18,
-                  }}
+                  style={{ textDecoration: "none", padding: "13px 30px", fontSize: 18 }}
                 >
                   Ro'yxatdan o'tish
                 </Link>
@@ -267,26 +249,12 @@ export default function HomePage() {
               }}
             >
               {[
-                {
-                  icon: <CalendarDays size={18} />,
-                  val: `${events.length}+`,
-                  label: "Tadbir",
-                },
-                {
-                  icon: <Users size={18} />,
-                  val: `${orgs.length}+`,
-                  label: "Tashkilot",
-                },
-                {
-                  icon: <Globe size={18} />,
-                  val: "1000+",
-                  label: "Foydalanuvchilar",
-                },
+                { icon: <CalendarDays size={18} />, val: `${events.length}+`, label: "Tadbir" },
+                { icon: <Users size={18} />, val: `${orgs.length}+`, label: "Tashkilot" },
+                { icon: <Globe size={18} />, val: "1000+", label: "Foydalanuvchilar" },
               ].map((s, i) => (
                 <div key={i}>
-                  <div style={{ color: "#cbd5e1", marginBottom: 6 }}>
-                    {s.icon}
-                  </div>
+                  <div style={{ color: "#cbd5e1", marginBottom: 6 }}>{s.icon}</div>
                   <div
                     style={{
                       fontFamily: "Arial, sans-serif",
@@ -316,9 +284,7 @@ export default function HomePage() {
       </section>
 
       {/* EVENTS */}
-      <section
-        style={{ padding: "10px 24px 80px", maxWidth: 1200, margin: "0 auto" }}
-      >
+      <section style={{ padding: "10px 24px 80px", maxWidth: 1200, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",
@@ -328,18 +294,11 @@ export default function HomePage() {
           }}
         >
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 6,
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span
                 style={{
                   fontSize: 20,
-                  color: "#0f172a", // ✅ qora
+                  color: "#0f172a",
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
                   fontWeight: 700,
@@ -355,7 +314,7 @@ export default function HomePage() {
                 textTransform: "uppercase",
                 fontWeight: 700,
                 fontSize: "clamp(12px,2vw,22px)",
-                color: "#0f172a", // ✅ qora
+                color: "#0f172a",
               }}
             >
               Nima bo'lyapti
@@ -365,28 +324,15 @@ export default function HomePage() {
           <Link
             to="/events"
             className="btn btn-ghost btn-sm"
-            style={{ textDecoration: "none", color: "#0f172a" }} // ✅ qora
+            style={{ textDecoration: "none", color: "#0f172a" }}
           >
             Hammasi <ArrowRight size={13} />
           </Link>
         </div>
 
         {top.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 0",
-              color: "rgba(15,23,42,0.7)",
-            }}
-          >
-            <CalendarDays
-              size={40}
-              style={{
-                margin: "0 auto 12px",
-                opacity: 0.25,
-                color: "#0f172a", // ✅ qora
-              }}
-            />
+          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(15,23,42,0.7)" }}>
+            <CalendarDays size={40} style={{ margin: "0 auto 12px", opacity: 0.25, color: "#0f172a" }} />
             <p style={{ margin: "0 auto 12px", opacity: 0.8, color: "#0f172a" }}>
               Hozircha yaqin tadbirlar yo'q
             </p>
@@ -401,7 +347,8 @@ export default function HomePage() {
           >
             {top.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
-              const cover = covers[Number(ev.id)];
+              const coverPath = covers[Number(ev.id)];
+              const coverUrl = coverPath ? toFileUrl(coverPath) : "";
 
               return (
                 <Link
@@ -418,49 +365,34 @@ export default function HomePage() {
                     border: "1px solid rgba(15,23,42,0.08)",
                     boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
                     backdropFilter: "blur(6px)",
-                    transition:
-                      "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
+                    transition: "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 16px 36px rgba(2,6,23,0.10)";
+                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
                     e.currentTarget.style.borderColor = "rgba(99,102,241,0.22)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 10px 26px rgba(2,6,23,0.06)";
+                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
                     e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
                   }}
                 >
                   {/* cover */}
-                  <div
-                    style={{
-                      position: "relative",
-                      height: 150,
-                      background: "rgba(15,23,42,0.06)",
-                    }}
-                  >
-                    {cover ? (
+                  <div style={{ position: "relative", height: 150, background: "rgba(15,23,42,0.06)" }}>
+                    {coverUrl ? (
                       <img
-                        src={cover}
+                        src={coverUrl} // ✅ FIX
                         alt={ev.title}
                         loading="lazy"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       />
                     ) : (
                       <div
                         style={{
                           width: "100%",
                           height: "100%",
-                          background:
-                            "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
                         }}
                       />
                     )}
@@ -492,7 +424,7 @@ export default function HomePage() {
                             fontFamily: "Arial, sans-serif",
                             fontWeight: 800,
                             fontSize: 18,
-                            color: "#0f172a", // ✅ qora
+                            color: "#0f172a",
                             lineHeight: 1,
                           }}
                         >
@@ -537,7 +469,7 @@ export default function HomePage() {
                         fontFamily: "Syne,sans-serif",
                         fontWeight: 800,
                         fontSize: 15,
-                        color: "#0f172a", // ✅ qora
+                        color: "#0f172a",
                         marginBottom: 8,
                         lineHeight: 1.3,
                       }}
@@ -611,12 +543,11 @@ export default function HomePage() {
           }}
         >
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            {/* Header */}
             <div style={{ textAlign: "center", marginBottom: 30 }}>
               <span
                 style={{
                   fontSize: 18,
-                  color: "#0f172a", // ✅ qora
+                  color: "#0f172a",
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
                   fontWeight: 700,
@@ -630,7 +561,7 @@ export default function HomePage() {
                   fontFamily: "Arial, sans-serif",
                   fontWeight: 800,
                   fontSize: "clamp(20px,3vw,50px)",
-                  color: "#0f172a", // ✅ qora
+                  color: "#0f172a",
                   marginTop: 8,
                 }}
               >
@@ -638,7 +569,6 @@ export default function HomePage() {
               </h2>
             </div>
 
-            {/* Slider */}
             <div
               style={{
                 display: "flex",
@@ -668,13 +598,11 @@ export default function HomePage() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 16px 36px rgba(2,6,23,0.10)";
+                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow =
-                      "0 10px 26px rgba(2,6,23,0.06)";
+                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
                   }}
                 >
                   <img
@@ -698,7 +626,7 @@ export default function HomePage() {
                       margin: "0 auto",
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#0f172a", // ✅ qora
+                      color: "#0f172a",
                       textAlign: "center",
                       fontFamily: "Arial, sans-serif",
                     }}
@@ -735,14 +663,12 @@ export default function HomePage() {
               fontFamily: "Syne,sans-serif",
               fontWeight: 700,
               fontSize: 14,
-              color: "#0f172a", // ✅ qora
+              color: "#0f172a",
             }}
           >
             🎫 TripDay
           </span>
-          <span style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
-            © 2025 TripDay
-          </span>
+          <span style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>© 2025 TripDay</span>
         </div>
       </footer>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { eventsSvc, regsSvc, likesSvc, commentsSvc } from "@/lib/api";
@@ -22,6 +22,10 @@ export default function EventDetailPage() {
   const { user, hasRole } = useAuth();
   const eventId = Number(id);
 
+  // ✅ ENV (prod/dev uchun)
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || ""; // masalan: http://10.113.31.105:8081/api
+  const FILES_BASE = import.meta.env.VITE_FILES_BASE || "http://10.113.31.105:8081"; // uploads shu yerda
+
   const [ev, setEv] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +42,13 @@ export default function EventDetailPage() {
   // ✅ images
   const [images, setImages] = useState<string[]>([]);
 
+  // helper: /uploads/... -> http://host/uploads/...
+  const toFileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
+    return `${FILES_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
+
   useEffect(() => {
     if (!eventId) return;
 
@@ -48,8 +59,9 @@ export default function EventDetailPage() {
       likesSvc.count(eventId).catch(() => 0),
       regsSvc.getCountByEvent(eventId).catch(() => 0),
       commentsSvc.getAll(eventId).catch(() => []),
+
       // ✅ images API:
-      fetch(`/api/events/${eventId}/images`)
+      fetch(`${API_BASE}/events/${eventId}/images`)
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
     ])
@@ -62,7 +74,7 @@ export default function EventDetailPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [eventId]);
+  }, [eventId, API_BASE]);
 
   useEffect(() => {
     if (!user || !eventId) return;
@@ -70,9 +82,10 @@ export default function EventDetailPage() {
       .getByUser(user.id)
       .then((list) => {
         setRegistered(
-          list.some(
-            (r: any) => r.eventId === eventId || r.event?.id === eventId,
-          ),
+          Array.isArray(list) &&
+            list.some(
+              (r: any) => r.eventId === eventId || r.event?.id === eventId,
+            ),
         );
       })
       .catch(() => {});
@@ -85,7 +98,10 @@ export default function EventDetailPage() {
     }
     try {
       await likesSvc.toggle(eventId);
-      setLikes((l) => l + 1);
+      // toggle bo‘lsa, count endpointni qayta olish yaxshiroq.
+      const c = await likesSvc.count(eventId).catch(() => null);
+      if (c !== null) setLikes(Number(c) || 0);
+      else setLikes((l) => l + 1);
     } catch {}
   };
 
@@ -378,7 +394,13 @@ export default function EventDetailPage() {
                   }}
                 >
                   <MapPin size={14} color="#4f46e5" />
-                  <div style={{ fontSize: 13, color: "#0f172a", fontWeight: 700 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "#0f172a",
+                      fontWeight: 700,
+                    }}
+                  >
                     {ev.locationName} ({lat.toFixed(5)}, {lng.toFixed(5)})
                   </div>
                   <a
@@ -422,7 +444,7 @@ export default function EventDetailPage() {
                 {images.map((img, i) => (
                   <img
                     key={i}
-                    src={img}
+                    src={toFileUrl(img)} // ✅ FIX: backend base + path
                     alt={`event-${eventId}-${i}`}
                     style={{
                       width: "100%",
@@ -453,11 +475,25 @@ export default function EventDetailPage() {
             </p>
 
             {/* Action row */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
               {!registered ? (
-                <button className="btn btn-primary" onClick={doRegister} disabled={regLoading}>
+                <button
+                  className="btn btn-primary"
+                  onClick={doRegister}
+                  disabled={regLoading}
+                >
                   {regLoading ? (
-                    <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                    <span
+                      className="spinner"
+                      style={{ width: 16, height: 16, borderWidth: 2 }}
+                    />
                   ) : (
                     <>
                       <Users size={15} />
@@ -466,7 +502,10 @@ export default function EventDetailPage() {
                   )}
                 </button>
               ) : (
-                <div className="tag tag-green" style={{ padding: "8px 16px", fontSize: 12 }}>
+                <div
+                  className="tag tag-green"
+                  style={{ padding: "8px 16px", fontSize: 12 }}
+                >
                   ✓ Ro'yxatdan o'tilgan
                 </div>
               )}
@@ -507,11 +546,15 @@ export default function EventDetailPage() {
               gap: 8,
             }}
           >
-            <MessageCircle size={18} color="var(--accent)" /> Izohlar ({comments.length})
+            <MessageCircle size={18} color="var(--accent)" /> Izohlar (
+            {comments.length})
           </h2>
 
           {/* Input */}
-          <form onSubmit={doComment} style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          <form
+            onSubmit={doComment}
+            style={{ display: "flex", gap: 10, marginBottom: 20 }}
+          >
             <input
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -532,7 +575,14 @@ export default function EventDetailPage() {
           {/* List */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {comments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: "rgba(15,23,42,0.65)", fontSize: 13 }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "32px 0",
+                  color: "rgba(15,23,42,0.65)",
+                  fontSize: 13,
+                }}
+              >
                 Hozircha izohlar yo'q. Birinchi bo'ling!
               </div>
             ) : (
@@ -552,23 +602,40 @@ export default function EventDetailPage() {
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 800, marginBottom: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--accent)",
+                        fontWeight: 800,
+                        marginBottom: 4,
+                      }}
+                    >
                       {c.userFullName || c.userName || "Foydalanuvchi"}
                     </div>
-                    <div style={{ fontSize: 14, color: "#0f172a", lineHeight: 1.6, fontWeight: 500 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        color: "#0f172a",
+                        lineHeight: 1.6,
+                        fontWeight: 500,
+                      }}
+                    >
                       {c.text}
                     </div>
                   </div>
 
-                  {user && (user.id === c.userId || hasRole("ADMIN") || hasRole("SUPER_ADMIN")) && (
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => delComment(c.id)}
-                      style={{ padding: "5px 10px" }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
+                  {user &&
+                    (user.id === c.userId ||
+                      hasRole("ADMIN") ||
+                      hasRole("SUPER_ADMIN")) && (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => delComment(c.id)}
+                        style={{ padding: "5px 10px" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                 </div>
               ))
             )}

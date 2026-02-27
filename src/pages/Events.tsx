@@ -17,19 +17,30 @@ function statusOk(ev: any) {
 export default function EventsPage() {
   const { hasRole } = useAuth();
 
+  // ✅ ENV (prod/dev)
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || ""; // masalan: http://10.113.31.105:8081/api
+  const FILES_BASE = import.meta.env.VITE_FILES_BASE || "http://10.113.31.105:8081"; // /uploads shu hostda
+
   const [all, setAll] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ eventId -> first image url (cover)
+  // ✅ eventId -> first image path (cover)
   const [covers, setCovers] = useState<Record<number, string>>({});
+
+  // ✅ helper: /uploads/... -> http://host/uploads/...
+  const toFileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
+    return `${FILES_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
 
   useEffect(() => {
     let alive = true;
 
-    eventsSvc
-      .getAll()
-      .then(async (d) => {
+    (async () => {
+      try {
+        const d = await eventsSvc.getAll();
         if (!alive) return;
 
         const list = Array.isArray(d) ? d : [];
@@ -42,9 +53,10 @@ export default function EventsPage() {
             if (!id) return [id, ""] as const;
 
             try {
-              const r = await fetch(`/api/events/${id}/images`);
+              const r = await fetch(`${API_BASE}/events/${id}/images`);
               const imgs = r.ok ? await r.json() : [];
-              const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              const first =
+                Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
               return [id, first] as const;
             } catch {
               return [id, ""] as const;
@@ -59,15 +71,15 @@ export default function EventsPage() {
           if (id && url) map[id] = url;
         }
         setCovers(map);
-
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
 
     return () => {
       alive = false;
     };
-  }, []);
+  }, [API_BASE]);
 
   const isAdmin = hasRole("ADMIN") || hasRole("SUPER_ADMIN");
   const isOrg = hasRole("TOUR_ORGANIZATION");
@@ -96,7 +108,6 @@ export default function EventsPage() {
     <div
       style={{
         minHeight: "100vh",
-        // ✅ butun page background yumshoqroq
         background: "linear-gradient(180deg,#f7f8ff,#eef2ff)",
       }}
     >
@@ -108,7 +119,7 @@ export default function EventsPage() {
           borderBottom: "1px solid rgba(15,23,42,0.08)",
           padding: "32px 24px 28px",
           position: "relative",
-          backgroundImage: "url('/slides/2.png')", // ✅ Vite/React: public ichida bo'lsa shunaqa yoziladi
+          backgroundImage: "url('/slides/2.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -116,7 +127,6 @@ export default function EventsPage() {
           overflow: "hidden",
         }}
       >
-        {/* overlay */}
         <div
           style={{
             position: "absolute",
@@ -235,7 +245,13 @@ export default function EventsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(15,23,42,0.65)" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "80px 0",
+              color: "rgba(15,23,42,0.65)",
+            }}
+          >
             <CalendarDays size={48} style={{ margin: "0 auto 16px", opacity: 0.25 }} />
             <h3
               style={{
@@ -259,7 +275,8 @@ export default function EventsPage() {
           >
             {filtered.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
-              const cover = covers[Number(ev.id)];
+              const coverPath = covers[Number(ev.id)];
+              const coverUrl = coverPath ? toFileUrl(coverPath) : "";
 
               return (
                 <Link
@@ -272,30 +289,29 @@ export default function EventsPage() {
                     animationDelay: `${Math.min(i, 8) * 0.04}s`,
                     borderRadius: 18,
                     overflow: "hidden",
-
-                    // ✅ yumshoq card background
                     background: "rgba(255,255,255,0.92)",
                     border: "1px solid rgba(15,23,42,0.08)",
                     boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
                     backdropFilter: "blur(6px)",
-                    transition: "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
+                    transition:
+                      "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-4px)";
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(99,102,241,0.22)";
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
+                    e.currentTarget.style.borderColor = "rgba(99,102,241,0.22)";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0px)";
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(15,23,42,0.08)";
+                    e.currentTarget.style.transform = "translateY(0px)";
+                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
+                    e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
                   }}
                 >
                   {/* ✅ cover image */}
                   <div style={{ position: "relative", height: 160, background: "rgba(15,23,42,0.06)" }}>
-                    {cover ? (
+                    {coverUrl ? (
                       <img
-                        src={cover}
+                        src={coverUrl} // ✅ FIX
                         alt={ev.title}
                         loading="lazy"
                         style={{
@@ -304,19 +320,25 @@ export default function EventsPage() {
                           objectFit: "cover",
                           display: "block",
                         }}
+                        onError={(e) => {
+                          // agar fayl topilmasa fallback ko‘rsatamiz
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
                       />
-                    ) : (
-                      // fallback (rasm bo'lmasa)
+                    ) : null}
+
+                    {/* fallback (rasm bo'lmasa) */}
+                    {!coverUrl && (
                       <div
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                          background:
+                            "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
                         }}
                       />
                     )}
 
-                    {/* top gradient for readability */}
                     <div
                       style={{
                         position: "absolute",
@@ -434,7 +456,13 @@ export default function EventsPage() {
                       {!isNaN(d.getTime()) && (
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <Clock size={11} color="rgba(15,23,42,0.55)" />
-                          <span style={{ fontSize: 11, color: "rgba(15,23,42,0.65)", fontWeight: 600 }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "rgba(15,23,42,0.65)",
+                              fontWeight: 600,
+                            }}
+                          >
                             {format(d, "HH:mm")}
                           </span>
                         </div>
