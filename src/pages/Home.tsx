@@ -215,7 +215,7 @@ export default function HomePage() {
                 gap: 48,
                 marginTop: 16,
                 flexWrap: "wrap",
-                justifyContent: "flex-start", // ⬅ chapga
+                justifyContent: "flex-start", 
               }}
             >
               {[
@@ -241,7 +241,7 @@ export default function HomePage() {
                   </div>
                   <div
                     style={{
-                      fontFamily: "Syne,sans-serif",
+                      fontFamily: "Arel",
                       fontWeight: 800,
                       fontSize: 26,
                       color: "#fff",
@@ -253,6 +253,7 @@ export default function HomePage() {
                     style={{
                       fontSize: 11,
                       color: "#94a3b8",
+                      fontFamily: "Arial, sans-serif",
                       textTransform: "uppercase",
                       letterSpacing: "0.07em",
                     }}
@@ -287,7 +288,7 @@ export default function HomePage() {
                 marginBottom: 6,
               }}
             >
-              <div className="dot dot-a" />
+              
               <span
                 style={{
                   fontSize: 20,
@@ -302,13 +303,15 @@ export default function HomePage() {
             </div>
             <h2
               style={{
-                fontFamily: "Syne,sans-serif",
-                fontWeight: 800,
-                fontSize: "clamp(12px,2vw,20px)",
+                letterSpacing: "0.08em",
+                fontFamily: "Arial, sans-serif",
+                textTransform: "uppercase",
+                fontWeight: 600,
+                fontSize: "clamp(12px,2vw,22px)",
                 color: "blue",
               }}
             >
-              Nima bo'lyapti?
+              Nima bo'lyapti
             </h2>
           </div>
           <Link
@@ -499,9 +502,9 @@ export default function HomePage() {
 
               <h2
                 style={{
-                  fontFamily: "Syne,sans-serif",
+                  fontFamily: "Arial, sans-serif",
                   fontWeight: 800,
-                  fontSize: "clamp(20px,3vw,30px)",
+                  fontSize: "clamp(20px,3vw,50px)",
                   color: "blue",
                   marginTop: 8,
                 }}
@@ -567,15 +570,13 @@ export default function HomePage() {
 
                   <div
                     style={{
-                      width: 300, // fontWidth emas!
+                      width: 300,
                       margin: "0 auto",
                       fontSize: 14,
                       fontWeight: 600,
                       color: "var(--text)",
-
                       textAlign: "center",
-                      wordBreak: "break-word", // uzun so‘z bo‘lsa ham pastga tushadi
-                      whiteSpace: "normal", // bitta qatorda majburlab qo‘ymaydi
+                      fontFamily: "Arial, sans-serif",
                     }}
                   >
                     {org.name}
