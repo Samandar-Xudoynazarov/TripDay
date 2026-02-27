@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { eventsSvc, orgsSvc } from "@/lib/api";
+import { eventsSvc } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import {
   CalendarDays,
   MapPin,
   ArrowRight,
-  Zap,
   Globe,
   Users,
-  TrendingUp,
   Clock,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -18,6 +16,10 @@ import { format } from "date-fns";
 export default function HomePage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
+  const [heroIdx, setHeroIdx] = useState(0);
+
+  // ✅ eventId -> first image url (cover)
+  const [covers, setCovers] = useState<Record<number, string>>({});
 
   const heroImages = [
     "/slides/1.png",
@@ -30,6 +32,7 @@ export default function HomePage() {
     "/slides/8.png",
     "/slides/9.png",
   ];
+
   const orgs = [
     {
       id: 1,
@@ -62,13 +65,49 @@ export default function HomePage() {
       logo: "/partners/5.jpeg",
     },
   ];
-  const [heroIdx, setHeroIdx] = useState(0);
 
   useEffect(() => {
+    let alive = true;
+
     eventsSvc
       .getUpcoming()
-      .then(setEvents)
+      .then(async (list) => {
+        if (!alive) return;
+
+        const arr = Array.isArray(list) ? list : [];
+        setEvents(arr);
+
+        // ✅ har event uchun 1ta cover: GET /api/events/:id/images
+        const results = await Promise.all(
+          arr.slice(0, 12).map(async (ev: any) => {
+            const id = Number(ev?.id);
+            if (!id) return [id, ""] as const;
+
+            try {
+              const r = await fetch(`/api/events/${id}/images`);
+              const imgs = r.ok ? await r.json() : [];
+              const first =
+                Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              return [id, first] as const;
+            } catch {
+              return [id, ""] as const;
+            }
+          }),
+        );
+
+        if (!alive) return;
+
+        const map: Record<number, string> = {};
+        for (const [id, url] of results) {
+          if (id && url) map[id] = url;
+        }
+        setCovers(map);
+      })
       .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -77,10 +116,17 @@ export default function HomePage() {
     }, 4000);
     return () => clearInterval(t);
   }, []);
+
   const top = events.slice(0, 6);
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        // ✅ yumshoq umumiy background
+        background: "linear-gradient(180deg,#f7f8ff,#eef2ff)",
+      }}
+    >
       <Navbar />
 
       {/* HERO */}
@@ -101,6 +147,7 @@ export default function HomePage() {
             background: "rgba(0,0,0,0.55)",
           }}
         />
+
         <div
           style={{
             position: "absolute",
@@ -140,8 +187,8 @@ export default function HomePage() {
             style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "flex-start", // ⬅ chapga
-              textAlign: "left", // ⬅ chapga
+              alignItems: "flex-start",
+              textAlign: "left",
               gap: 22,
               maxWidth: 700,
             }}
@@ -153,6 +200,7 @@ export default function HomePage() {
                 fontWeight: 800,
                 fontSize: "clamp(25px,4vw,56px)",
                 lineHeight: 1.05,
+                color: "#fff",
               }}
             >
               <span className="gradient-text">Sayohatni</span>
@@ -178,7 +226,7 @@ export default function HomePage() {
                 display: "flex",
                 gap: 12,
                 flexWrap: "wrap",
-                justifyContent: "flex-start", // ⬅ chapga
+                justifyContent: "flex-start",
               }}
             >
               <Link
@@ -215,7 +263,7 @@ export default function HomePage() {
                 gap: 48,
                 marginTop: 16,
                 flexWrap: "wrap",
-                justifyContent: "flex-start", 
+                justifyContent: "flex-start",
               }}
             >
               {[
@@ -241,7 +289,7 @@ export default function HomePage() {
                   </div>
                   <div
                     style={{
-                      fontFamily: "Arel",
+                      fontFamily: "Arial, sans-serif",
                       fontWeight: 800,
                       fontSize: 26,
                       color: "#fff",
@@ -288,14 +336,13 @@ export default function HomePage() {
                 marginBottom: 6,
               }}
             >
-              
               <span
                 style={{
                   fontSize: 20,
-                  color: "blue",
+                  color: "#0f172a", // ✅ qora
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
-                  fontWeight: 600,
+                  fontWeight: 700,
                 }}
               >
                 Yaqin tadbirlar
@@ -306,18 +353,19 @@ export default function HomePage() {
                 letterSpacing: "0.08em",
                 fontFamily: "Arial, sans-serif",
                 textTransform: "uppercase",
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: "clamp(12px,2vw,22px)",
-                color: "blue",
+                color: "#0f172a", // ✅ qora
               }}
             >
               Nima bo'lyapti
             </h2>
           </div>
+
           <Link
             to="/events"
             className="btn btn-ghost btn-sm"
-            style={{ textDecoration: "none", color: "blue" }}
+            style={{ textDecoration: "none", color: "#0f172a" }} // ✅ qora
           >
             Hammasi <ArrowRight size={13} />
           </Link>
@@ -328,14 +376,18 @@ export default function HomePage() {
             style={{
               textAlign: "center",
               padding: "60px 0",
-              color: "var(--text-muted)",
+              color: "rgba(15,23,42,0.7)",
             }}
           >
             <CalendarDays
               size={40}
-              style={{ margin: "0 auto 12px", opacity: 0.25, color: "blue" }}
+              style={{
+                margin: "0 auto 12px",
+                opacity: 0.25,
+                color: "#0f172a", // ✅ qora
+              }}
             />
-            <p style={{ margin: "0 auto 12px", opacity: 0.25, color: "blue" }}>
+            <p style={{ margin: "0 auto 12px", opacity: 0.8, color: "#0f172a" }}>
               Hozircha yaqin tadbirlar yo'q
             </p>
           </div>
@@ -349,49 +401,98 @@ export default function HomePage() {
           >
             {top.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
+              const cover = covers[Number(ev.id)];
+
               return (
                 <Link
                   key={ev.id}
                   to={`/events/${ev.id}`}
-                  className="card card-hover anim-up"
+                  className="card-hover anim-up"
                   style={{
                     textDecoration: "none",
                     display: "block",
                     animationDelay: `${i * 0.05}s`,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.92)",
+                    border: "1px solid rgba(15,23,42,0.08)",
+                    boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
+                    backdropFilter: "blur(6px)",
+                    transition:
+                      "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow =
+                      "0 16px 36px rgba(2,6,23,0.10)";
+                    e.currentTarget.style.borderColor = "rgba(99,102,241,0.22)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0px)";
+                    e.currentTarget.style.boxShadow =
+                      "0 10px 26px rgba(2,6,23,0.06)";
+                    e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
                   }}
                 >
+                  {/* cover */}
                   <div
                     style={{
-                      height: 3,
-                      background:
-                        "linear-gradient(90deg,var(--accent),var(--accent2))",
-                      opacity: 0.65,
+                      position: "relative",
+                      height: 150,
+                      background: "rgba(15,23,42,0.06)",
                     }}
-                  />
-                  <div style={{ padding: "18px 20px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: 14,
-                      }}
-                    >
+                  >
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt={ev.title}
+                        loading="lazy"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
                       <div
                         style={{
-                          background: "rgba(124,106,247,0.1)",
-                          border: "1px solid rgba(124,106,247,0.2)",
-                          borderRadius: 9,
-                          padding: "6px 11px",
+                          width: "100%",
+                          height: "100%",
+                          background:
+                            "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                        }}
+                      />
+                    )}
+
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background:
+                          "linear-gradient(180deg, rgba(2,6,23,0.35) 0%, rgba(2,6,23,0.05) 55%, rgba(255,255,255,0) 100%)",
+                      }}
+                    />
+
+                    {/* date pill */}
+                    <div style={{ position: "absolute", left: 12, top: 12 }}>
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.80)",
+                          border: "1px solid rgba(15,23,42,0.08)",
+                          backdropFilter: "blur(10px)",
+                          borderRadius: 10,
+                          padding: "6px 10px",
                           textAlign: "center",
+                          minWidth: 54,
                         }}
                       >
                         <div
                           style={{
-                            fontFamily: "Syne,sans-serif",
-                            fontWeight: 700,
-                            fontSize: 20,
-                            color: "#a89af9",
+                            fontFamily: "Arial, sans-serif",
+                            fontWeight: 800,
+                            fontSize: 18,
+                            color: "#0f172a", // ✅ qora
                             lineHeight: 1,
                           }}
                         >
@@ -400,34 +501,54 @@ export default function HomePage() {
                         <div
                           style={{
                             fontSize: 9,
-                            color: "var(--text-muted)",
+                            color: "rgba(15,23,42,0.70)",
                             textTransform: "uppercase",
-                            marginTop: 1,
+                            marginTop: 2,
+                            fontWeight: 700,
                           }}
                         >
                           {isNaN(d.getTime()) ? "" : format(d, "MMM")}
                         </div>
                       </div>
-                      <span className="tag tag-green" style={{ fontSize: 10 }}>
+                    </div>
+
+                    {/* tag */}
+                    <div style={{ position: "absolute", right: 12, top: 12 }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: "#064e3b",
+                          background: "rgba(16,185,129,0.18)",
+                          border: "1px solid rgba(16,185,129,0.25)",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          backdropFilter: "blur(10px)",
+                        }}
+                      >
                         Upcoming
                       </span>
                     </div>
+                  </div>
+
+                  <div style={{ padding: "16px 18px 18px" }}>
                     <h3
                       style={{
                         fontFamily: "Syne,sans-serif",
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: 15,
-                        color: "var(--text)",
+                        color: "#0f172a", // ✅ qora
                         marginBottom: 8,
                         lineHeight: 1.3,
                       }}
                     >
                       {ev.title}
                     </h3>
+
                     <p
                       style={{
                         fontSize: 12,
-                        color: "var(--text-muted)",
+                        color: "rgba(15,23,42,0.70)",
                         lineHeight: 1.6,
                         marginBottom: 12,
                         display: "-webkit-box",
@@ -438,19 +559,22 @@ export default function HomePage() {
                     >
                       {ev.description}
                     </p>
-                    <div style={{ display: "flex", gap: 12 }}>
+
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                       <span
                         style={{
                           display: "flex",
                           alignItems: "center",
                           gap: 4,
                           fontSize: 11,
-                          color: "var(--text-muted)",
+                          color: "rgba(15,23,42,0.70)",
+                          fontWeight: 600,
                         }}
                       >
                         <MapPin size={10} />
                         {ev.locationName}
                       </span>
+
                       {!isNaN(d.getTime()) && (
                         <span
                           style={{
@@ -458,7 +582,8 @@ export default function HomePage() {
                             alignItems: "center",
                             gap: 4,
                             fontSize: 11,
-                            color: "var(--text-muted)",
+                            color: "rgba(15,23,42,0.70)",
+                            fontWeight: 600,
                           }}
                         >
                           <Clock size={10} />
@@ -479,9 +604,9 @@ export default function HomePage() {
         <section
           style={{
             padding: "40px 24px",
-            background: "none",
-            borderTop: "1px solid var(--border)",
-            borderBottom: "1px solid var(--border)",
+            background: "rgba(255,255,255,0.55)",
+            borderTop: "1px solid rgba(15,23,42,0.08)",
+            borderBottom: "1px solid rgba(15,23,42,0.08)",
             overflow: "hidden",
           }}
         >
@@ -491,10 +616,10 @@ export default function HomePage() {
               <span
                 style={{
                   fontSize: 18,
-                  color: "blue",
+                  color: "#0f172a", // ✅ qora
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
-                  fontWeight: 600,
+                  fontWeight: 700,
                 }}
               >
                 Hamkor tashkilotlar
@@ -505,7 +630,7 @@ export default function HomePage() {
                   fontFamily: "Arial, sans-serif",
                   fontWeight: 800,
                   fontSize: "clamp(20px,3vw,50px)",
-                  color: "blue",
+                  color: "#0f172a", // ✅ qora
                   marginTop: 8,
                 }}
               >
@@ -532,25 +657,26 @@ export default function HomePage() {
                   style={{
                     flex: "0 0 auto",
                     minWidth: 180,
-                    background: "var(--surface2)",
-                    border: "1px solid var(--border)",
+                    background: "rgba(255,255,255,0.88)",
+                    border: "1px solid rgba(15,23,42,0.08)",
                     borderRadius: 16,
                     padding: "18px 20px",
                     textAlign: "center",
                     textDecoration: "none",
                     transition: "all 0.25s ease",
+                    boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
                     e.currentTarget.style.boxShadow =
-                      "0 10px 25px rgba(0,0,0,0.08)";
+                      "0 16px 36px rgba(2,6,23,0.10)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.boxShadow =
+                      "0 10px 26px rgba(2,6,23,0.06)";
                   }}
                 >
-                  {/* LOGO (blue tint) */}
                   <img
                     src={org.logo}
                     alt={org.name}
@@ -561,8 +687,6 @@ export default function HomePage() {
                       objectFit: "contain",
                       display: "block",
                       margin: "0 auto 10px",
-
-                      // hamma rasmni ko‘k rangga o‘tkazish (tint)
                       filter:
                         "brightness(0) saturate(100%) invert(27%) sepia(92%) saturate(3800%) hue-rotate(205deg) brightness(95%) contrast(105%)",
                     }}
@@ -573,8 +697,8 @@ export default function HomePage() {
                       width: 300,
                       margin: "0 auto",
                       fontSize: 14,
-                      fontWeight: 600,
-                      color: "var(--text)",
+                      fontWeight: 700,
+                      color: "#0f172a", // ✅ qora
                       textAlign: "center",
                       fontFamily: "Arial, sans-serif",
                     }}
@@ -588,78 +712,11 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* CTA */}
-      {/* {!user && (
-        <section
-          style={{
-            padding: "70px 24px",
-            textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse at center,rgba(124,106,247,0.06),transparent 65%)",
-              pointerEvents: "none",
-            }}
-          />
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div
-              className="tag tag-accent anim-up"
-              style={{ margin: "0 auto 18px" }}
-            >
-              <TrendingUp size={10} /> Hoziroq boshlang
-            </div>
-            <h2
-              className="anim-up s1"
-              style={{
-                fontFamily: "Syne,sans-serif",
-                fontWeight: 800,
-                fontSize: "clamp(22px,4vw,42px)",
-                marginBottom: 14,
-              }}
-            >
-              Tadbirlaringizni <span className="gradient-text">yarating</span>
-            </h2>
-            <p
-              className="anim-up s2"
-              style={{
-                fontSize: 15,
-                color: "var(--text-muted)",
-                marginBottom: 28,
-                maxWidth: 440,
-                margin: "0 auto 28px",
-              }}
-            >
-              Tashkilot sifatida ro'yxatdan o'ting va o'z tadbirlaringizni e'lon
-              qiling
-            </p>
-            <div className="anim-up s3">
-              <Link
-                to="/register"
-                className="btn btn-primary"
-                style={{
-                  textDecoration: "none",
-                  padding: "14px 32px",
-                  fontSize: 15,
-                }}
-              >
-                Bepul boshlash <ArrowRight size={16} />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )} */}
-
       <footer
         style={{
-          borderTop: "1px solid var(--border)",
+          borderTop: "1px solid rgba(15,23,42,0.08)",
           padding: "24px",
-          background: "var(--surface)",
+          background: "rgba(255,255,255,0.65)",
         }}
       >
         <div
@@ -678,12 +735,12 @@ export default function HomePage() {
               fontFamily: "Syne,sans-serif",
               fontWeight: 700,
               fontSize: 14,
-              color: "var(--text)",
+              color: "#0f172a", // ✅ qora
             }}
           >
             🎫 TripDay
           </span>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <span style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
             © 2025 TripDay
           </span>
         </div>

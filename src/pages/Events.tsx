@@ -15,19 +15,58 @@ function statusOk(ev: any) {
 }
 
 export default function EventsPage() {
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
+
   const [all, setAll] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // ✅ eventId -> first image url (cover)
+  const [covers, setCovers] = useState<Record<number, string>>({});
+
   useEffect(() => {
+    let alive = true;
+
     eventsSvc
       .getAll()
-      .then((d) => {
-        setAll(d);
+      .then(async (d) => {
+        if (!alive) return;
+
+        const list = Array.isArray(d) ? d : [];
+        setAll(list);
+
+        // ✅ rasmlarini parallel olib kelamiz (har event uchun 1ta cover yetadi)
+        const results = await Promise.all(
+          list.map(async (ev: any) => {
+            const id = Number(ev?.id);
+            if (!id) return [id, ""] as const;
+
+            try {
+              const r = await fetch(`/api/events/${id}/images`);
+              const imgs = r.ok ? await r.json() : [];
+              const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              return [id, first] as const;
+            } catch {
+              return [id, ""] as const;
+            }
+          }),
+        );
+
+        if (!alive) return;
+
+        const map: Record<number, string> = {};
+        for (const [id, url] of results) {
+          if (id && url) map[id] = url;
+        }
+        setCovers(map);
+
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const isAdmin = hasRole("ADMIN") || hasRole("SUPER_ADMIN");
@@ -54,16 +93,22 @@ export default function EventsPage() {
   }, [visible, q]);
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        // ✅ butun page background yumshoqroq
+        background: "linear-gradient(180deg,#f7f8ff,#eef2ff)",
+      }}
+    >
       <Navbar />
 
       {/* Header */}
       <div
         style={{
-          borderBottom: "1px solid var(--border)",
+          borderBottom: "1px solid rgba(15,23,42,0.08)",
           padding: "32px 24px 28px",
           position: "relative",
-          backgroundImage: "url('../public/slides/2.png')", // ⬅ rasm yo‘li
+          backgroundImage: "url('/slides/2.png')", // ✅ Vite/React: public ichida bo'lsa shunaqa yoziladi
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -71,12 +116,12 @@ export default function EventsPage() {
           overflow: "hidden",
         }}
       >
-        {/* 🔥 Qoramtir overlay */}
+        {/* overlay */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
+            background: "rgba(2,6,23,0.55)",
             zIndex: 0,
           }}
         />
@@ -120,7 +165,7 @@ export default function EventsPage() {
                 left: 13,
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "#94a3b8",
+                color: "#cbd5e1",
               }}
             />
 
@@ -132,11 +177,11 @@ export default function EventsPage() {
               style={{
                 paddingLeft: 38,
                 fontFamily: "Inter, sans-serif",
-                background: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(8px)",
+                background: "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(10px)",
                 color: "#fff",
                 borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.2)",
+                border: "1px solid rgba(255,255,255,0.25)",
               }}
             />
           </div>
@@ -154,14 +199,24 @@ export default function EventsPage() {
             }}
           >
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="card" style={{ height: 220 }}>
-                <div style={{ height: 3, background: "var(--border)" }} />
+              <div
+                key={i}
+                className="card"
+                style={{
+                  height: 240,
+                  borderRadius: 18,
+                  background: "rgba(255,255,255,0.85)",
+                  border: "1px solid rgba(15,23,42,0.08)",
+                  boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
+                }}
+              >
+                <div style={{ height: 3, background: "rgba(15,23,42,0.12)" }} />
                 <div style={{ padding: 20 }}>
                   <div
                     style={{
                       height: 14,
                       borderRadius: 6,
-                      background: "var(--surface2)",
+                      background: "rgba(15,23,42,0.08)",
                       marginBottom: 10,
                     }}
                     className="animate-shimmer"
@@ -170,7 +225,7 @@ export default function EventsPage() {
                     style={{
                       height: 14,
                       borderRadius: 6,
-                      background: "var(--surface2)",
+                      background: "rgba(15,23,42,0.08)",
                       width: "60%",
                     }}
                     className="animate-shimmer"
@@ -180,22 +235,13 @@ export default function EventsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "80px 0",
-              color: "var(--text-muted)",
-            }}
-          >
-            <CalendarDays
-              size={48}
-              style={{ margin: "0 auto 16px", opacity: 0.25 }}
-            />
+          <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(15,23,42,0.65)" }}>
+            <CalendarDays size={48} style={{ margin: "0 auto 16px", opacity: 0.25 }} />
             <h3
               style={{
                 fontFamily: "Syne,sans-serif",
                 fontSize: 18,
-                color: "var(--text)",
+                color: "#0f172a",
                 marginBottom: 8,
               }}
             >
@@ -213,50 +259,92 @@ export default function EventsPage() {
           >
             {filtered.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
+              const cover = covers[Number(ev.id)];
+
               return (
                 <Link
                   key={ev.id}
                   to={`/events/${ev.id}`}
-                  className="card card-hover anim-up"
+                  className="card-hover anim-up"
                   style={{
                     textDecoration: "none",
                     display: "block",
                     animationDelay: `${Math.min(i, 8) * 0.04}s`,
+                    borderRadius: 18,
+                    overflow: "hidden",
+
+                    // ✅ yumshoq card background
+                    background: "rgba(255,255,255,0.92)",
+                    border: "1px solid rgba(15,23,42,0.08)",
+                    boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
+                    backdropFilter: "blur(6px)",
+                    transition: "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-4px)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(99,102,241,0.22)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0px)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(15,23,42,0.08)";
                   }}
                 >
-                  <div
-                    style={{
-                      height: 3,
-                      background:
-                        "linear-gradient(90deg,var(--accent),var(--accent2))",
-                      opacity: 0.6,
-                    }}
-                  />
-                  <div style={{ padding: "18px 20px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: 14,
-                      }}
-                    >
+                  {/* ✅ cover image */}
+                  <div style={{ position: "relative", height: 160, background: "rgba(15,23,42,0.06)" }}>
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt={ev.title}
+                        loading="lazy"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      // fallback (rasm bo'lmasa)
                       <div
                         style={{
-                          background: "rgba(124,106,247,0.1)",
-                          border: "1px solid rgba(124,106,247,0.2)",
-                          borderRadius: 8,
+                          width: "100%",
+                          height: "100%",
+                          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                        }}
+                      />
+                    )}
+
+                    {/* top gradient for readability */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background:
+                          "linear-gradient(180deg, rgba(2,6,23,0.35) 0%, rgba(2,6,23,0.05) 55%, rgba(255,255,255,0) 100%)",
+                      }}
+                    />
+
+                    {/* date pill */}
+                    <div style={{ position: "absolute", left: 12, top: 12 }}>
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.75)",
+                          border: "1px solid rgba(15,23,42,0.08)",
+                          backdropFilter: "blur(10px)",
+                          borderRadius: 10,
                           padding: "6px 10px",
                           textAlign: "center",
-                          minWidth: 48,
+                          minWidth: 54,
                         }}
                       >
                         <div
                           style={{
                             fontFamily: "Syne,sans-serif",
-                            fontWeight: 700,
+                            fontWeight: 800,
                             fontSize: 18,
-                            color: "#a89af9",
+                            color: "#4f46e5",
                             lineHeight: 1,
                           }}
                         >
@@ -265,34 +353,55 @@ export default function EventsPage() {
                         <div
                           style={{
                             fontSize: 9,
-                            color: "var(--text-muted)",
+                            color: "rgba(15,23,42,0.65)",
                             textTransform: "uppercase",
                             marginTop: 2,
+                            fontWeight: 700,
                           }}
                         >
                           {isNaN(d.getTime()) ? "" : format(d, "MMM")}
                         </div>
                       </div>
-                      <span className="tag tag-green" style={{ fontSize: 10 }}>
+                    </div>
+
+                    {/* upcoming tag */}
+                    <div style={{ position: "absolute", right: 12, top: 12 }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: "#065f46",
+                          background: "rgba(16,185,129,0.18)",
+                          border: "1px solid rgba(16,185,129,0.25)",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          backdropFilter: "blur(10px)",
+                        }}
+                      >
                         Upcoming
                       </span>
                     </div>
+                  </div>
+
+                  {/* content */}
+                  <div style={{ padding: "16px 18px 18px" }}>
                     <h3
                       style={{
                         fontFamily: "Syne,sans-serif",
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: 15,
-                        color: "var(--text)",
+                        color: "#0f172a",
                         marginBottom: 8,
                         lineHeight: 1.3,
                       }}
                     >
                       {ev.title}
                     </h3>
+
                     <p
                       style={{
                         fontSize: 12,
-                        color: "var(--text-muted)",
+                        color: "rgba(15,23,42,0.65)",
                         lineHeight: 1.6,
                         marginBottom: 14,
                         display: "-webkit-box",
@@ -303,40 +412,29 @@ export default function EventsPage() {
                     >
                       {ev.description}
                     </p>
-                    <div style={{ display: "flex", gap: 14 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                      >
-                        <MapPin size={11} color="var(--text-muted)" />
+
+                    <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <MapPin size={11} color="rgba(15,23,42,0.55)" />
                         <span
                           style={{
                             fontSize: 11,
-                            color: "var(--text-muted)",
+                            color: "rgba(15,23,42,0.65)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
-                            maxWidth: 120,
+                            maxWidth: 160,
+                            fontWeight: 600,
                           }}
                         >
                           {ev.locationName}
                         </span>
                       </div>
+
                       {!isNaN(d.getTime()) && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 5,
-                          }}
-                        >
-                          <Clock size={11} color="var(--text-muted)" />
-                          <span
-                            style={{ fontSize: 11, color: "var(--text-muted)" }}
-                          >
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <Clock size={11} color="rgba(15,23,42,0.55)" />
+                          <span style={{ fontSize: 11, color: "rgba(15,23,42,0.65)", fontWeight: 600 }}>
                             {format(d, "HH:mm")}
                           </span>
                         </div>

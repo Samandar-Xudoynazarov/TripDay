@@ -171,7 +171,7 @@ export default function AdminPage() {
     load();
   };
 
-  const SCard = ({ val, label, icon, accent, onClick }: any) => (
+  const SCard = ({ val, label, icon, accent, onClick, bg }: any) => (
     <div
       className="card"
       style={{
@@ -179,6 +179,11 @@ export default function AdminPage() {
         cursor: onClick ? "pointer" : "default",
         position: "relative",
         overflow: "hidden",
+
+        // ✅ background shu yerda
+        background: bg || "linear-gradient(135deg,#0b1220,#0f1a33)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
       }}
       onClick={onClick}
     >
@@ -203,6 +208,7 @@ export default function AdminPage() {
           >
             {label}
           </div>
+
           <div
             style={{
               fontFamily: "Syne,sans-serif",
@@ -214,6 +220,7 @@ export default function AdminPage() {
             {val}
           </div>
         </div>
+
         <div
           style={{
             width: 40,
@@ -249,7 +256,7 @@ export default function AdminPage() {
 
   return (
     <Shell items={items} title={label}>
-      <div style={{ padding: "28px 28px", minHeight: "100vh" }}>
+      <div style={{ padding: "28px 28px", minHeight: "0" }}>
         {/* Header */}
         <div
           style={{
@@ -273,7 +280,7 @@ export default function AdminPage() {
             >
               {label} Panel
             </h1>
-            <p style={{ fontSize: 13, color: "blue" }}>
+            <p style={{ fontSize: 18, color: "blue" }}>
               Barcha ma'lumotlarni boshqaring
             </p>
           </div>
@@ -333,31 +340,40 @@ export default function AdminPage() {
                 label="Kutilayotgan tashkilotlar"
                 icon={<Clock size={18} color="#fbbf24" />}
                 accent="#fbbf24"
+                bg="linear-gradient(135deg,#2a2110,#14100a)" // ✅ sariq theme
                 onClick={() => goTab("orgs")}
               />
+
               <SCard
                 val={pendingEvents.length}
                 label="Kutilayotgan tadbirlar"
                 icon={<Clock size={18} color="#f06292" />}
                 accent="#f06292"
+                bg="linear-gradient(135deg,#2a1020,#140a12)" // ✅ pink theme
                 onClick={() => goTab("events")}
               />
+
               <SCard
                 val={verifiedOrgs.length}
                 label="Tasdiqlangan tashkilotlar"
                 icon={<Building2 size={18} color="#4ade80" />}
                 accent="#4ade80"
+                bg="linear-gradient(135deg,#0f2a1a,#08150e)" // ✅ green theme
               />
+
               <SCard
                 val={users.length}
                 label="Jami foydalanuvchilar"
                 icon={<Users size={18} color="var(--accent)" />}
+                bg="linear-gradient(135deg,#0b1f2e,#07131c)" // ✅ blue theme
               />
+
               <SCard
                 val={events.length}
                 label="Jami tadbirlar"
                 icon={<Ticket size={18} color="#67e8f9" />}
                 accent="#67e8f9"
+                bg="linear-gradient(135deg,#06212a,#041014)" // ✅ cyan theme
               />
             </div>
 
