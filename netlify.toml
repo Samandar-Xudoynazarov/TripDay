@@ -1,0 +1,17 @@
+[build]
+  command = "pnpm install --frozen-lockfile && pnpm run build"
+  publish = "dist"
+
+# API proxy → backend server
+# Bu Netlify'da Vite proxy o'rnini bosadi
+[[redirects]]
+  from = "/api/*"
+  to = "http://185.203.237.55:8081/api/:splat"
+  status = 200
+  force = true
+
+# SPA routing (React Router) — API redirectdan KEYIN bo'lishi shart!
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

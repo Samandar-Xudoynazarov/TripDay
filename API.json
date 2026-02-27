@@ -1,0 +1,642 @@
+{
+  "info": {
+    "name": "WepsiteTurist API (FULL)",
+    "_postman_id": "7b54b2c7-1d3f-4a88-8c6b-2f12a9c0f000",
+    "description": "All endpoints from your controllers (Auth, Users, Orgs, Admin, Events, Images, Registrations, Likes, Comments, Public image)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE", "value": "http://localhost:8080" },
+    { "key": "userId", "value": "1" },
+    { "key": "orgId", "value": "1" },
+    { "key": "eventId", "value": "1" },
+    { "key": "registrationId", "value": "1" },
+    { "key": "commentId", "value": "1" },
+    { "key": "publicToken", "value": "abc123token" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/register (send code)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Samandar Xudoynazarov\",\n  \"email\": \"samandarxudoynazarov2208@gmail.com\",\n  \"phone\": \"+998901234567\",\n  \"country\": \"Uzbekistan\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/auth/register",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/verify-register (create user + tokens) ✅ auto-save tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.accessToken) pm.environment.set('ACCESS_TOKEN', json.accessToken);",
+                  "  if (json && json.refreshToken) pm.environment.set('REFRESH_TOKEN', json.refreshToken);",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"samandarxudoynazarov2208@gmail.com\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/auth/verify-register",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "verify-register"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/login (send code)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"samandarxudoynazarov2208@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/auth/login",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/verify-login (tokens) ✅ auto-save tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.accessToken) pm.environment.set('ACCESS_TOKEN', json.accessToken);",
+                  "  if (json && json.refreshToken) pm.environment.set('REFRESH_TOKEN', json.refreshToken);",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"samandarxudoynazarov2208@gmail.com\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/auth/verify-login",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "verify-login"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/refresh ✅ auto-save ACCESS_TOKEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.accessToken) pm.environment.set('ACCESS_TOKEN', json.accessToken);",
+                  "  if (json && json.refreshToken) pm.environment.set('REFRESH_TOKEN', json.refreshToken);",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}" },
+            "url": {
+              "raw": "{{BASE}}/api/auth/refresh",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}" },
+            "url": {
+              "raw": "{{BASE}}/api/auth/logout",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/force-logout/{userId} (SUPER_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{SUPER_ADMIN_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/auth/force-logout/{{userId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "auth", "force-logout", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Users (/api/users)",
+      "item": [
+        {
+          "name": "POST /api/users (create)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ali Valiyev\",\n  \"email\": \"ali@example.com\",\n  \"phone\": \"+998911112233\",\n  \"country\": \"Uzbekistan\"\n}"
+            },
+            "url": { "raw": "{{BASE}}/api/users", "host": ["{{BASE}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "GET /api/users (get all)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/users", "host": ["{{BASE}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "GET /api/users/{id} (get by id)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/users/{{userId}}", "host": ["{{BASE}}"], "path": ["api", "users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "PUT /api/users/{id} (update)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ali Valiyev Updated\",\n  \"email\": \"ali@example.com\",\n  \"phone\": \"+998911112233\",\n  \"country\": \"Uzbekistan\"\n}"
+            },
+            "url": { "raw": "{{BASE}}/api/users/{{userId}}", "host": ["{{BASE}}"], "path": ["api", "users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "PATCH /api/users/{id}/enabled?enabled=true|false",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{BASE}}/api/users/{{userId}}/enabled?enabled=true",
+              "host": ["{{BASE}}"],
+              "path": ["api", "users", "{{userId}}", "enabled"],
+              "query": [{ "key": "enabled", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/users/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{BASE}}/api/users/{{userId}}", "host": ["{{BASE}}"], "path": ["api", "users", "{{userId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Organizations (/api/organizations)",
+      "item": [
+        {
+          "name": "POST /api/organizations (create) 🔒 Bearer ACCESS_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Samarkand Travel Group\",\n  \"description\": \"Tour and events organization\",\n  \"address\": \"Samarkand, Registan street 10\",\n  \"phone\": \"+998901112233\"\n}"
+            },
+            "url": { "raw": "{{BASE}}/api/organizations", "host": ["{{BASE}}"], "path": ["api", "organizations"] }
+          }
+        },
+        {
+          "name": "GET /api/organizations (get all)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/organizations", "host": ["{{BASE}}"], "path": ["api", "organizations"] }
+          }
+        },
+        {
+          "name": "GET /api/organizations/verified",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/organizations/verified", "host": ["{{BASE}}"], "path": ["api", "organizations", "verified"] }
+          }
+        },
+        {
+          "name": "GET /api/organizations/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/organizations/{{orgId}}", "host": ["{{BASE}}"], "path": ["api", "organizations", "{{orgId}}"] }
+          }
+        },
+        {
+          "name": "PUT /api/organizations/{id} 🔒 Bearer ACCESS_TOKEN",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Samarkand Travel Group (Updated)\",\n  \"description\": \"Updated description\",\n  \"address\": \"Samarkand, new address 1\",\n  \"phone\": \"+998901112233\"\n}"
+            },
+            "url": { "raw": "{{BASE}}/api/organizations/{{orgId}}", "host": ["{{BASE}}"], "path": ["api", "organizations", "{{orgId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /api/organizations/{id} 🔒 Bearer ACCESS_TOKEN",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{BASE}}/api/organizations/{{orgId}}", "host": ["{{BASE}}"], "path": ["api", "organizations", "{{orgId}}"] }
+          }
+        },
+        {
+          "name": "PATCH /api/organizations/{id}/verify?verified=true|false (⚠️ hozir himoya yo‘q bo‘lishi mumkin)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{BASE}}/api/organizations/{{orgId}}/verify?verified=true",
+              "host": ["{{BASE}}"],
+              "path": ["api", "organizations", "{{orgId}}", "verify"],
+              "query": [{ "key": "verified", "value": "true" }]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Admin (/api/admin)",
+      "item": [
+        {
+          "name": "POST /api/admin/users/{userId}/make-admin (SUPER_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{SUPER_ADMIN_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/admin/users/{{userId}}/make-admin",
+              "host": ["{{BASE}}"],
+              "path": ["api", "admin", "users", "{{userId}}", "make-admin"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/admin/users/{userId}/make-tour (ADMIN or SUPER_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/admin/users/{{userId}}/make-tour",
+              "host": ["{{BASE}}"],
+              "path": ["api", "admin", "users", "{{userId}}", "make-tour"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/admin/organizations/{id}/approve (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/admin/organizations/{{orgId}}/approve",
+              "host": ["{{BASE}}"],
+              "path": ["api", "admin", "organizations", "{{orgId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/admin/organizations/{id}/reject?reason=... (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/admin/organizations/{{orgId}}/reject?reason=Hujjatlar%20yetarli%20emas",
+              "host": ["{{BASE}}"],
+              "path": ["api", "admin", "organizations", "{{orgId}}", "reject"],
+              "query": [{ "key": "reason", "value": "Hujjatlar yetarli emas" }]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Events (/api/events)",
+      "item": [
+        {
+          "name": "POST /api/events (create multipart) 🔒 TOUR_ORG_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{TOUR_ORG_TOKEN}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Registan Night Tour", "type": "text" },
+                { "key": "description", "value": "A wonderful night trip in Samarkand", "type": "text" },
+                { "key": "locationName", "value": "Registan, Samarkand", "type": "text" },
+                { "key": "latitude", "value": "39.6542", "type": "text" },
+                { "key": "longitude", "value": "66.9758", "type": "text" },
+                { "key": "eventDateTime", "value": "2026-03-01T18:30:00", "type": "text" },
+                { "key": "organizationId", "value": "1", "type": "text" },
+                { "key": "files", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{BASE}}/api/events", "host": ["{{BASE}}"], "path": ["api", "events"] }
+          }
+        },
+        {
+          "name": "GET /api/events (get all)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/events", "host": ["{{BASE}}"], "path": ["api", "events"] }
+          }
+        },
+        {
+          "name": "GET /api/events/{id}",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/events/{{eventId}}", "host": ["{{BASE}}"], "path": ["api", "events", "{{eventId}}"] }
+          }
+        },
+        {
+          "name": "GET /api/events/upcoming",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/events/upcoming", "host": ["{{BASE}}"], "path": ["api", "events", "upcoming"] }
+          }
+        },
+        {
+          "name": "PUT /api/events/{id} (update JSON) 🔒 TOUR_ORG_TOKEN",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOUR_ORG_TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Registan Night Tour (Updated)\",\n  \"description\": \"Updated description\",\n  \"locationName\": \"Registan Square\",\n  \"latitude\": 39.6542,\n  \"longitude\": 66.9758,\n  \"eventDateTime\": \"2026-03-02T19:00:00\"\n}"
+            },
+            "url": { "raw": "{{BASE}}/api/events/{{eventId}}", "host": ["{{BASE}}"], "path": ["api", "events", "{{eventId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /api/events/{id} 🔒 TOUR_ORG_TOKEN",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{TOUR_ORG_TOKEN}}" }],
+            "url": { "raw": "{{BASE}}/api/events/{{eventId}}", "host": ["{{BASE}}"], "path": ["api", "events", "{{eventId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Event Images (/api/events/{eventId}/images)",
+      "item": [
+        {
+          "name": "POST /api/events/{eventId}/images (upload multipart) 🔒 ACCESS_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "files", "type": "file", "src": "" }]
+            },
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/images",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "images"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/events/{eventId}/images",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/images",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "images"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Registrations (/api/registrations)",
+      "item": [
+        {
+          "name": "POST /api/registrations?eventId=... (register) 🔒 ACCESS_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/registrations?eventId={{eventId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "registrations"],
+              "query": [{ "key": "eventId", "value": "{{eventId}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /api/registrations (get all)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE}}/api/registrations", "host": ["{{BASE}}"], "path": ["api", "registrations"] }
+          }
+        },
+        {
+          "name": "GET /api/registrations/{id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/registrations/{{registrationId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "registrations", "{{registrationId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/registrations/user/{userId}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/registrations/user/{{userId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "registrations", "user", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/registrations/event/{eventId}/count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/registrations/event/{{eventId}}/count",
+              "host": ["{{BASE}}"],
+              "path": ["api", "registrations", "event", "{{eventId}}", "count"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/registrations/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{BASE}}/api/registrations/{{registrationId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "registrations", "{{registrationId}}"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Likes (/api/events/{eventId}/like)",
+      "item": [
+        {
+          "name": "POST /api/events/{eventId}/like (toggle) 🔒 ACCESS_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/like",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "like"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/events/{eventId}/likes (count)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/likes",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "likes"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Comments (/api/events/{eventId}/comments)",
+      "item": [
+        {
+          "name": "POST /api/events/{eventId}/comments (create) 🔒 ACCESS_TOKEN",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"text\": \"Zo'r tadbir ekan!\"\n}" },
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/comments",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/events/{eventId}/comments (get all)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/api/events/{{eventId}}/comments",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "{{eventId}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/events/comments/{commentId} 🔒 ACCESS_TOKEN",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{BASE}}/api/events/comments/{{commentId}}",
+              "host": ["{{BASE}}"],
+              "path": ["api", "events", "comments", "{{commentId}}"]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Public Image (/i/{token})",
+      "item": [
+        {
+          "name": "GET /i/{token} (viewCount++)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{BASE}}/i/{{publicToken}}",
+              "host": ["{{BASE}}"],
+              "path": ["i", "{{publicToken}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /i/{token}/share (shareCount++)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{BASE}}/i/{{publicToken}}/share",
+              "host": ["{{BASE}}"],
+              "path": ["i", "{{publicToken}}", "share"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
