@@ -339,6 +339,7 @@ export default function EventsPage() {
                       />
                     )}
 
+
                     <div
                       style={{
                         position: "absolute",

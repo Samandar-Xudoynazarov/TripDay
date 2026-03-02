@@ -502,6 +502,7 @@ export default function HomePage() {
                           color: "rgba(15,23,42,0.70)",
                           fontWeight: 600,
                         }}
+                        
                       >
                         <MapPin size={10} />
                         {ev.locationName}
