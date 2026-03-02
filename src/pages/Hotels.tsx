@@ -84,6 +84,9 @@ export default function HotelsPage() {
                           ))}
                         </div>
                       )}
+
+
+                      
                     </div>
                     {item.city && (
                       <div style={{ display:'flex', alignItems:'center', gap:5, color:'var(--text-muted)', fontSize:12, marginBottom:6 }}>
