@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { orgsSvc, eventsSvc } from "@/lib/api";
+import { orgsSvc, eventsSvc, registrationsApi } from "@/lib/api";
 import Shell from "@/components/Shell";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,8 @@ import {
 import { format } from "date-fns";
 
 import CreateEventDialog from "@/components/CreateEventDialog"; // o'zingdagi pathga mos
+import EditEventDialog from "@/components/EditEventDialog";
+import RegistrationsDialog from "@/components/RegistrationsDialog";
 
 type CreateEventPayload = {
   title: string;
@@ -133,6 +135,18 @@ export default function DashboardPage() {
     await eventsSvc.delete(id);
     setEvents((p) => p.filter((e) => e.id !== id));
     toast.success("O'chirildi");
+  };
+
+  const updateEvent = async (eventId: number, payload: any) => {
+    await eventsSvc.update(eventId, payload);
+    toast.success("Saqlangan");
+    await load();
+  };
+
+  const loadRegs = async (eventId: number) => {
+    const res = await registrationsApi.getAll();
+    const all = Array.isArray(res.data) ? res.data : [];
+    return all.filter((r: any) => Number(r?.eventId ?? r?.event?.id) === Number(eventId));
   };
 
   if (loading) {
@@ -479,6 +493,21 @@ export default function DashboardPage() {
                     >
                       <Eye size={13} />
                     </Link>
+
+                    <EditEventDialog
+                      event={ev}
+                      onSave={updateEvent}
+                      disabled={!org?.verified}
+                      triggerVariant="icon"
+                    />
+
+                    <RegistrationsDialog
+                      eventId={ev.id}
+                      eventTitle={ev.title}
+                      triggerVariant="icon"
+                      load={loadRegs}
+                    />
+
                     <button
                       className="btn btn-danger btn-sm"
                       style={{ padding: "6px 10px" }}

@@ -58,7 +58,7 @@ type CreateEventPayload = {
   locationName: string;
   latitude: number;
   longitude: number;
-  eventDateTime: string; // "YYYY-MM-DDTHH:mm:ss"
+  eventDateTime: string; 
   organizationId: number;
   files: File[];
 };

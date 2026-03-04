@@ -2,6 +2,7 @@ import { Toaster } from 'sonner';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth';
 import Guard from '@/components/Guard';
+import WebSocketBridge from '@/components/WebSocketBridge';
 
 // ─── Pages (existing) ────────────────────────────────────────────────────────
 import HomePage             from './pages/Home';
@@ -32,7 +33,8 @@ const SUPER  = ['SUPER_ADMIN'] as const;
 export default function App() {
   return (
     <AuthProvider>
-      <Toaster theme="dark" position="bottom-right" />
+      <Toaster theme="light" position="bottom-right" />
+      <WebSocketBridge />
       <BrowserRouter>
         <Routes>
           {/* ── Public ─────────────────────────────────────────────────── */}

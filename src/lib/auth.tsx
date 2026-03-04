@@ -14,6 +14,9 @@ export const API = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, 
 const api = axios.create({ baseURL: API });
 const noAuth = axios.create({ baseURL: API });
 
+// Prevent refresh storms (multiple 401s at once)
+let refreshPromise: Promise<{ accessToken: string; refreshToken?: string }> | null = null;
+
 // JWT request interceptor — tries 'accessToken' first (new), falls back to 'token' (old)
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('accessToken') || localStorage.getItem('token');
@@ -31,11 +34,20 @@ api.interceptors.response.use(
       const rt = localStorage.getItem('refreshToken');
       if (rt) {
         try {
-          const res = await api.post('/auth/refresh', { refreshToken: rt });
-          const newToken = res.data.accessToken;
+          // Use noAuth for refresh to avoid sending expired access token again
+          if (!refreshPromise) {
+            refreshPromise = noAuth
+              .post('/auth/refresh', { refreshToken: rt })
+              .then((res) => res.data)
+              .finally(() => {
+                refreshPromise = null;
+              });
+          }
+          const data = await refreshPromise;
+          const newToken = data?.accessToken;
           localStorage.setItem('accessToken', newToken);
           localStorage.setItem('token', newToken); // keep both keys in sync
-          if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
+          if (data?.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
           orig.headers.Authorization = `Bearer ${newToken}`;
           return api(orig);
         } catch {
@@ -59,6 +71,14 @@ function parseJwt(token: string): Record<string, any> | null {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
   } catch { return null; }
+}
+
+function isJwtExpired(token: string, skewSeconds = 60): boolean {
+  const p = parseJwt(token);
+  const exp = Number((p as any)?.exp);
+  if (!exp) return false; // best-effort
+  const now = Math.floor(Date.now() / 1000);
+  return exp <= now + skewSeconds;
 }
 
 export function normalizeRoles(raw: any): string[] {
@@ -138,6 +158,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setIsLoading(false);
+  }, []);
+
+  // Proactive refresh: keep user logged-in until refresh token expires.
+  // Fixes the "qayta-qayta login" issue on reload.
+  useEffect(() => {
+    const run = async () => {
+      const t = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const rt = localStorage.getItem('refreshToken');
+      if (!t || !rt) return;
+      if (!isJwtExpired(t)) return;
+      try {
+        const data = await noAuth.post('/auth/refresh', { refreshToken: rt }).then((r) => r.data);
+        if (data?.accessToken) {
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('token', data.accessToken);
+          if (data?.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+          setToken(data.accessToken);
+        }
+      } catch {
+        // ignore; normal requests will redirect if needed
+      }
+    };
+    run();
   }, []);
 
   const applyToken = useCallback((accessToken: string, emailFallback?: string) => {

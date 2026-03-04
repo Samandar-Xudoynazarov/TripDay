@@ -68,8 +68,14 @@ function clampText(s: string, n: number) {
   return t.length > n ? t.slice(0, n).trim() + "…" : t;
 }
 
-/** MiniCalendar (IndexPage dagi kalendar) */
-function MiniCalendar({ events }: { events: EventItem[] }) {
+/** ✅ MiniCalendar (o‘ng tomondagi listda cover chiqadi) */
+function MiniCalendar({
+  events,
+  covers,
+}: {
+  events: EventItem[];
+  covers: Record<number, string>;
+}) {
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [mode, setMode] = useState<"MONTH" | "WEEK">("MONTH");
@@ -129,12 +135,7 @@ function MiniCalendar({ events }: { events: EventItem[] }) {
         ].join(" ")}
       >
         <div className="flex items-center justify-between">
-          <span
-            className={[
-              "font-semibold",
-              isToday ? "text-blue-700" : "text-slate-900",
-            ].join(" ")}
-          >
+          <span className={["font-semibold", isToday ? "text-blue-700" : "text-slate-900"].join(" ")}>
             {format(day, "d")}
           </span>
 
@@ -157,9 +158,7 @@ function MiniCalendar({ events }: { events: EventItem[] }) {
         ))}
 
         {dayEvents.length > 2 ? (
-          <div className="mt-1 text-[10px] text-slate-500">
-            +{dayEvents.length - 2} ta
-          </div>
+          <div className="mt-1 text-[10px] text-slate-500">+{dayEvents.length - 2} ta</div>
         ) : null}
       </button>
     );
@@ -221,10 +220,7 @@ function MiniCalendar({ events }: { events: EventItem[] }) {
                 >
                   {mode === "MONTH" ? "Haftalik ko‘rinish" : "Oylik ko‘rinish"}
                   <ChevronUp
-                    className={[
-                      "w-3 h-3 transition",
-                      mode === "MONTH" ? "rotate-180" : "",
-                    ].join(" ")}
+                    className={["w-3 h-3 transition", mode === "MONTH" ? "rotate-180" : ""].join(" ")}
                   />
                 </button>
               </div>
@@ -249,10 +245,7 @@ function MiniCalendar({ events }: { events: EventItem[] }) {
         <CardContent className="bg-white">
           <div className="grid grid-cols-7 gap-2 mb-2">
             {WEEKDAYS.map((d) => (
-              <div
-                key={d}
-                className="text-center text-xs font-semibold text-slate-600"
-              >
+              <div key={d} className="text-center text-xs font-semibold text-slate-600">
                 {d}
               </div>
             ))}
@@ -283,40 +276,60 @@ function MiniCalendar({ events }: { events: EventItem[] }) {
           ) : (
             selectedDayEvents.map((ev) => {
               const vis = getEventVisibilityLabel(ev);
+              const cover = covers[ev.id];
+
               return (
                 <Link
                   to={`/events/${ev.id}`}
                   key={ev.id}
                   className="block rounded-2xl border border-slate-200 bg-white hover:border-blue-200 hover:shadow-sm transition"
                 >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 truncate">{ev.title}</div>
-                        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {format(new Date(ev.eventDateTime), "HH:mm")}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {ev.locationName}
-                          </span>
-                        </div>
-                      </div>
-
-                      {vis ? (
-                        <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
-                          {vis}
-                        </Badge>
-                      ) : null}
+                  <div className="p-4 flex gap-3">
+                    {/* ✅ LEFT: cover */}
+                    <div className="w-[54px] h-[54px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                      {cover ? (
+                        <img
+                          src={cover}
+                          alt={ev.title}
+                          className="w-full h-full object-cover block"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-100 to-sky-100" />
+                      )}
                     </div>
 
-                    {ev.organizationName ? (
-                      <div className="mt-3 text-[11px] text-slate-500">
-                        {ev.organizationName}
+                    {/* ✅ RIGHT: info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 truncate">{ev.title}</div>
+                          <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {format(new Date(ev.eventDateTime), "HH:mm")}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5" />
+                              {ev.locationName}
+                            </span>
+                          </div>
+                        </div>
+
+                        {vis ? (
+                          <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
+                            {vis}
+                          </Badge>
+                        ) : null}
                       </div>
-                    ) : null}
+
+                      {ev.organizationName ? (
+                        <div className="mt-3 text-[11px] text-slate-500">{ev.organizationName}</div>
+                      ) : null}
+                    </div>
                   </div>
                 </Link>
               );
@@ -332,13 +345,65 @@ export default function Navbar() {
   const { user, logout, hasRole } = useAuth();
   const nav = useNavigate();
 
+  // ✅ ENV: API so‘rov /api bilan, IMG esa origin bilan
+  const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
+  const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";
+
+  const apiUrl = (p: string) =>
+    `${ORIGIN}${API_PREFIX}${p.startsWith("/") ? "" : "/"}${p}`;
+
+  const fileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http")) return p;
+    return `${ORIGIN}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
+
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [covers, setCovers] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    eventsSvc
-      .getUpcoming()
-      .then((r) => setEvents(Array.isArray(r) ? r : []))
-      .catch(() => {});
+    let alive = true;
+
+    (async () => {
+      try {
+        const r = await eventsSvc.getUpcoming();
+        const list = Array.isArray(r) ? r : [];
+        if (!alive) return;
+
+        setEvents(list);
+
+        // ✅ har event uchun /api/events/:id/images dan 1ta rasm (first)
+        const results = await Promise.all(
+          list.slice(0, 120).map(async (ev) => {
+            const id = Number(ev?.id);
+            if (!id) return [id, ""] as const;
+
+            try {
+              const res = await fetch(apiUrl(`/events/${id}/images`));
+              const imgs = res.ok ? await res.json() : [];
+              const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              return [id, first ? fileUrl(first) : ""] as const;
+            } catch {
+              return [id, ""] as const;
+            }
+          })
+        );
+
+        if (!alive) return;
+
+        const map: Record<number, string> = {};
+        for (const [id, cover] of results) {
+          if (id && cover) map[id] = cover;
+        }
+        setCovers(map);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const adminPath = hasRole("SUPER_ADMIN") ? "/super-admin" : "/admin";
@@ -385,9 +450,9 @@ export default function Navbar() {
           }}
         >
           <img
-            src="/4.png"
+            src="/png.png"
             alt="TripDay"
-            style={{ height: 150, width: "auto", display: "block" }}
+            style={{ height: 70, width: "auto", display: "block" }}
           />
         </NavLink>
 
@@ -416,12 +481,13 @@ export default function Navbar() {
               </button>
             </DialogTrigger>
 
-            {/* ✅ Kulrang fon + matnlar aniq ko‘rinsin */}
             <DialogContent className="max-w-6xl bg-slate-100 text-slate-900">
               <DialogHeader>
                 <DialogTitle className="text-slate-900"></DialogTitle>
               </DialogHeader>
-              <MiniCalendar events={events} />
+
+              {/* ✅ covers map ni ham beramiz */}
+              <MiniCalendar events={events} covers={covers} />
             </DialogContent>
           </Dialog>
 

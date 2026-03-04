@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "../lib/auth";
 import { orgsSvc, adminSvc, usersSvc, eventsSvc } from "@/lib/api";
 import { normalizeRoles } from "@/lib/auth";
 import Shell from "@/components/Shell";
@@ -17,8 +17,22 @@ import {
   Shield,
   RefreshCw,
   TrendingUp,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { useTranslation } from "react-i18next";
 
 function toArr(d: any) {
   if (Array.isArray(d)) return d;
@@ -26,20 +40,23 @@ function toArr(d: any) {
   return [];
 }
 
-type Tab = "overview" | "orgs" | "events" | "users";
+type Tab = "overview" | "orgs" | "events" | "users" | "tour" | "admins";
 
 export default function AdminPage() {
   const { user, isLoading, hasRole, logout } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
+  const { t } = useTranslation();
 
   const isSuper = hasRole("SUPER_ADMIN");
   const base = isSuper ? "/super-admin" : "/admin";
-  const label = isSuper ? "Super Admin" : "Admin";
+  const label = isSuper ? t("common.superAdmin") : t("common.admin");
 
   const tabFromUrl = (() => {
     const t = new URLSearchParams(loc.search).get("tab") as Tab;
-    return ["overview", "orgs", "events", "users"].includes(t) ? t : "overview";
+    return ["overview", "orgs", "events", "users", "tour", "admins"].includes(t)
+      ? t
+      : "overview";
   })();
 
   const [tab, setTab] = useState<Tab>(tabFromUrl);
@@ -50,6 +67,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [pendingEvents, setPendingEvents] = useState<any[]>([]);
+  const [tourOrgs, setTourOrgs] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
 
@@ -74,16 +93,42 @@ export default function AdminPage() {
       const pendingEventsPromise = isSuper
         ? Promise.resolve([])
         : adminSvc.pendingEvents();
-      const [o, u, ev, pEv] = await Promise.all([
+      // Management endpoints (role-based):
+      // - /management/tour-organizations  → ADMIN + SUPER_ADMIN
+      // - /management/admins              → SUPER_ADMIN only
+      const tourPromise = (async () => {
+        try {
+          // lazy import to avoid circular
+          const { mgmtSvc } = await import("@/lib/api");
+          return mgmtSvc.getTour();
+        } catch {
+          return [];
+        }
+      })();
+      const adminsPromise = (async () => {
+        if (!isSuper) return [];
+        try {
+          const { mgmtSvc } = await import("@/lib/api");
+          return mgmtSvc.getAdmins();
+        } catch {
+          return [];
+        }
+      })();
+
+      const [o, u, ev, pEv, tOrgs, adms] = await Promise.all([
         orgsSvc.getAll(),
         usersSvc.getAll(),
         eventsSvc.getAll(),
         pendingEventsPromise,
+        tourPromise,
+        adminsPromise,
       ]);
       setOrgs(toArr(o));
       setUsers(toArr(u));
       setEvents(toArr(ev));
       setPendingEvents(toArr(pEv));
+      setTourOrgs(toArr(tOrgs));
+      setAdmins(toArr(adms));
     } catch {
       toast.error("Ma'lumotlar yuklanmadi");
     } finally {
@@ -96,16 +141,42 @@ export default function AdminPage() {
 
   const items = [
     {
-      label: "Umumiy ko'rinish",
+      label: t("common.dashboard"),
       to: `${base}?tab=overview`,
       icon: "dashboard",
     },
-    { label: "Tashkilotlar", to: `${base}?tab=orgs`, icon: "org" },
-    { label: "Tadbirlar", to: `${base}?tab=events`, icon: "events" },
-    { label: "Foydalanuvchilar", to: `${base}?tab=users`, icon: "users" },
-    { label: "Mehmonxonalar", to: `${base}/hotels`, icon: "hotel" },
-    { label: "Bosh sahifa", to: "/", icon: "home" },
+    { label: t("common.organizations"), to: `${base}?tab=orgs`, icon: "org" },
+    { label: t("common.tourismers"), to: `${base}?tab=tour`, icon: "shield" },
+    { label: t("common.events"), to: `${base}?tab=events`, icon: "events" },
+    { label: t("common.users"), to: `${base}?tab=users`, icon: "users" },
+    ...(isSuper
+      ? [{ label: t("common.admins"), to: `${base}?tab=admins`, icon: "users" }]
+      : []),
+    { label: t("common.hotels"), to: `${base}/hotels`, icon: "hotel" },
+    { label: t("common.home"), to: "/", icon: "home" },
   ];
+
+  const countryData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const u of users) {
+      const c = String(u?.country ?? "Unknown").trim() || "Unknown";
+      map.set(c, (map.get(c) || 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [users]);
+
+  const roleData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const u of users) {
+      const roles = normalizeRoles(u?.roles ?? u?.authorities);
+      const r = roles[0] || "USER";
+      map.set(r, (map.get(r) || 0) + 1);
+    }
+    return [...map.entries()].map(([name, value]) => ({ name, value }));
+  }, [users]);
 
   const filteredUsers = useMemo(() => {
     const x = q.toLowerCase();
@@ -153,6 +224,17 @@ export default function AdminPage() {
     setRejectEvReason("");
     load();
   };
+
+  const deleteEv = async (id: number) => {
+    if (!confirm("Eventni butunlay o‘chirishni xohlaysizmi?")) return;
+    try {
+      await eventsSvc.delete(id);
+      toast.success("Event o‘chirildi");
+      load();
+    } catch {
+      toast.error("Eventni o‘chirib bo‘lmadi");
+    }
+  };
   const makeAdmin = async (uid: number) => {
     if (!confirm("Admin qilish?")) return;
     await adminSvc.makeAdmin(uid);
@@ -180,10 +262,11 @@ export default function AdminPage() {
         position: "relative",
         overflow: "hidden",
 
-        // ✅ background shu yerda
-        background: bg || "linear-gradient(135deg,#0b1220,#0f1a33)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        background:
+          bg ||
+          "linear-gradient(135deg, rgba(37,99,235,0.10), rgba(56,189,248,0.10))",
+        border: "1px solid var(--border)",
+        boxShadow: "0 12px 30px rgba(2,6,23,0.08)",
       }}
       onClick={onClick}
     >
@@ -211,7 +294,7 @@ export default function AdminPage() {
 
           <div
             style={{
-              fontFamily: "Syne,sans-serif",
+              fontFamily: "DM Sans,sans-serif",
               fontWeight: 800,
               fontSize: 32,
               color: accent || "var(--text)",
@@ -309,24 +392,43 @@ export default function AdminPage() {
             gap: "15px",
           }}
         >
-          {(["overview", "orgs", "events", "users"] as Tab[]).map((t) => (
+          {(
+            ([
+              "overview",
+              "orgs",
+              "tour",
+              "events",
+              "users",
+              ...(isSuper ? (["admins"] as Tab[]) : []),
+            ] as Tab[])
+          ).map((t) => (
             <button
               key={t}
               className={`tab-btn${tab === t ? " active" : ""}`}
               onClick={() => goTab(t)}
               style={{
-                background: "blue",
-                padding: "10px",
-                borderRadius: "15px",
+                background:
+                  tab === t
+                    ? "linear-gradient(135deg,var(--accent),var(--accent2))"
+                    : "rgba(255,255,255,0.7)",
+                color: tab === t ? "#fff" : "var(--text)",
+                padding: "10px 14px",
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                fontWeight: 700,
               }}
             >
               {t === "overview"
                 ? "Umumiy"
                 : t === "orgs"
                   ? "Tashkilotlar"
+                  : t === "tour"
+                    ? "Turizmchilar"
                   : t === "events"
                     ? "Tadbirlar"
-                    : "Foydalanuvchilar"}
+                    : t === "users"
+                      ? "Foydalanuvchilar"
+                      : "Adminlar"}
             </button>
           ))}
         </div>
@@ -339,8 +441,8 @@ export default function AdminPage() {
                 val={pendingOrgs.length}
                 label="Kutilayotgan tashkilotlar"
                 icon={<Clock size={18} color="#fbbf24" />}
-                accent="#fbbf24"
-                bg="linear-gradient(135deg,#2a2110,#14100a)" // ✅ sariq theme
+                accent="#f59e0b"
+                bg="linear-gradient(135deg, rgba(245,158,11,0.18), rgba(56,189,248,0.08))"
                 onClick={() => goTab("orgs")}
               />
 
@@ -348,8 +450,8 @@ export default function AdminPage() {
                 val={pendingEvents.length}
                 label="Kutilayotgan tadbirlar"
                 icon={<Clock size={18} color="#f06292" />}
-                accent="#f06292"
-                bg="linear-gradient(135deg,#2a1020,#140a12)" // ✅ pink theme
+                accent="#ec4899"
+                bg="linear-gradient(135deg, rgba(236,72,153,0.14), rgba(37,99,235,0.08))"
                 onClick={() => goTab("events")}
               />
 
@@ -357,37 +459,142 @@ export default function AdminPage() {
                 val={verifiedOrgs.length}
                 label="Tasdiqlangan tashkilotlar"
                 icon={<Building2 size={18} color="#4ade80" />}
-                accent="#4ade80"
-                bg="linear-gradient(135deg,#0f2a1a,#08150e)" // ✅ green theme
+                accent="#16a34a"
+                bg="linear-gradient(135deg, rgba(34,197,94,0.14), rgba(56,189,248,0.08))"
               />
 
               <SCard
                 val={users.length}
                 label="Jami foydalanuvchilar"
                 icon={<Users size={18} color="var(--accent)" />}
-                bg="linear-gradient(135deg,#0b1f2e,#07131c)" // ✅ blue theme
+                bg="linear-gradient(135deg, rgba(37,99,235,0.14), rgba(56,189,248,0.10))"
               />
 
               <SCard
                 val={events.length}
                 label="Jami tadbirlar"
                 icon={<Ticket size={18} color="#67e8f9" />}
-                accent="#67e8f9"
-                bg="linear-gradient(135deg,#06212a,#041014)" // ✅ cyan theme
+                accent="#0284c7"
+                bg="linear-gradient(135deg, rgba(56,189,248,0.16), rgba(37,99,235,0.08))"
               />
+            </div>
+
+            {/* STATISTICS (charts) */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+                gap: 16,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                className="card"
+                style={{
+                  padding: 18,
+                  background: "rgba(255,255,255,0.85)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 18,
+                  boxShadow: "0 14px 34px rgba(2,6,23,0.08)",
+                }}
+              >
+                <div style={{ fontWeight: 900, marginBottom: 10 }}>
+                  Foydalanuvchilar: davlatlar bo'yicha
+                </div>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={countryData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="country" tick={{ fontSize: 11 }} interval={0} angle={-18} textAnchor="end" height={55} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="rgba(37,99,235,0.75)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div
+                className="card"
+                style={{
+                  padding: 18,
+                  background: "rgba(255,255,255,0.85)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 18,
+                  boxShadow: "0 14px 34px rgba(2,6,23,0.08)",
+                }}
+              >
+                <div style={{ fontWeight: 900, marginBottom: 10 }}>
+                  Rollar taqsimoti
+                </div>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip />
+                      <Pie data={roleData} dataKey="value" nameKey="name" outerRadius={95}>
+                        {roleData.map((_, idx) => (
+                          <Cell
+                            key={idx}
+                            fill={[
+                              "rgba(37,99,235,0.85)",
+                              "rgba(56,189,248,0.85)",
+                              "rgba(34,197,94,0.75)",
+                              "rgba(245,158,11,0.75)",
+                              "rgba(236,72,153,0.75)",
+                              "rgba(15,23,42,0.65)",
+                            ][idx % 6]}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
 
             {/* Pending orgs quick */}
             {pendingOrgs.length > 0 && (
-              <div className="mb-5 rounded-2xl border border-white/10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 text-sky-50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:bg-black hover:from-black hover:via-black hover:to-black hover:shadow-2xl">
+              <div
+                className="mb-5"
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(56,189,248,0.08))",
+                  boxShadow: "0 14px 34px rgba(2,6,23,0.08)",
+                  overflow: "hidden",
+                }}
+              >
                 {/* header */}
-                <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
+                <div
+                  className="px-5 py-4"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
                   <Clock size={15} color="#fbbf24" />
-                  <span className="font-bold text-[15px] text-sky-50">
+                  <span style={{ fontWeight: 800, fontSize: 15, color: "var(--text)" }}>
                     Tasdiqlanmagan tashkilotlar
                   </span>
 
-                  <span className="ml-auto inline-flex items-center justify-center rounded-full bg-yellow-400/15 text-yellow-200 border border-yellow-300/20 px-2.5 py-1 text-xs font-semibold">
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 999,
+                      background: "rgba(245,158,11,0.14)",
+                      border: "1px solid rgba(245,158,11,0.20)",
+                      color: "#92400e",
+                      padding: "6px 10px",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
                     {pendingOrgs.length}
                   </span>
                 </div>
@@ -494,6 +701,118 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TOUR ORGS (ADMIN + SUPER_ADMIN) */}
+        {tab === "tour" && (
+          <div className="anim-in">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <Shield size={18} color="var(--accent)" />
+              <div style={{ fontWeight: 900, fontSize: 16 }}>Turizmchilar ro'yxati</div>
+            </div>
+
+            <div style={{ maxWidth: 520, marginBottom: 14 }}>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Qidirish (nom, email, tel...)"
+                className="inp"
+              />
+            </div>
+
+            <div
+              className="card"
+              style={{
+                background: "rgba(255,255,255,0.86)",
+                border: "1px solid var(--border)",
+                borderRadius: 18,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ overflowX: "auto" }}>
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nomi</th>
+                      <th>Manzil</th>
+                      <th>Email</th>
+                      <th>Holat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(q
+                      ? tourOrgs.filter((o) =>
+                          `${o?.name ?? ""}${o?.email ?? ""}${o?.phone ?? ""}${o?.address ?? ""}`
+                            .toLowerCase()
+                            .includes(q.toLowerCase()),
+                        )
+                      : tourOrgs
+                    ).map((o: any) => (
+                      <tr key={o?.id ?? Math.random()}>
+                        <td>{o?.id ?? "—"}</td>
+                        <td style={{ fontWeight: 700 }}>{o?.name ?? "—"}</td>
+                        <td>{o?.address ?? "—"}</td>
+                        <td>{o?.email ?? "—"}</td>
+                        <td>
+                          {o?.verified ? (
+                            <span className="tag tag-green">Verified</span>
+                          ) : (
+                            <span className="tag tag-yellow">Pending</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ADMINS (SUPER_ADMIN only) */}
+        {tab === "admins" && isSuper && (
+          <div className="anim-in">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <Users size={18} color="var(--accent)" />
+              <div style={{ fontWeight: 900, fontSize: 16 }}>Adminlar ro'yxati</div>
+            </div>
+
+            <div
+              className="card"
+              style={{
+                background: "rgba(255,255,255,0.86)",
+                border: "1px solid var(--border)",
+                borderRadius: 18,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ overflowX: "auto" }}>
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Ism</th>
+                      <th>Email</th>
+                      <th>Telefon</th>
+                      <th>Davlat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {admins.map((a: any) => (
+                      <tr key={a?.id ?? Math.random()}>
+                        <td>{a?.id ?? "—"}</td>
+                        <td style={{ fontWeight: 800 }}>{a?.fullName ?? a?.name ?? "—"}</td>
+                        <td>{a?.email ?? "—"}</td>
+                        <td>{a?.phone ?? "—"}</td>
+                        <td>{a?.country ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -733,6 +1052,8 @@ export default function AdminPage() {
                                 >
                                   Ko'rish
                                 </Link>
+
+                                {/* Event o'chirish: faqat tashkilotchi (TOUR_ORGANIZATION)da qoladi */}
 
                                 {isPending && (
                                   <>

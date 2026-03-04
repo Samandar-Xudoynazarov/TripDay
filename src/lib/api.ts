@@ -184,9 +184,6 @@ export const eventImagesApi = {
   getImages: (eventId: number) => api.get(`/events/${eventId}/images`),
 };
 
-// ═════════════════════════════════════════════════════════════════════════════
-// REGISTRATIONS
-// ═════════════════════════════════════════════════════════════════════════════
 export const regsSvc = {
   register:        (eventId: number) => api.post(`/registrations?eventId=${eventId}`),
   getAll:          () => api.get('/registrations').then(r => safeArr(r)),

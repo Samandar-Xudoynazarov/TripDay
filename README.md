@@ -56,6 +56,45 @@ pnpm build
 
 Netlify config is in `netlify.toml`. SPA redirects in `public/_redirects`.
 
+## Deploy (Docker + Nginx)
+
+### 1) Build & run
+```bash
+docker build -t tripday-web .
+docker run -p 8080:80 tripday-web
+```
+Open: http://localhost:8080
+
+### 2) Compose
+```bash
+docker compose up --build
+```
+
+> Note: Vite env variables are **build-time**. For production, set envs during build.
+
+## Environment
+
+Create `.env` (or set build envs):
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_WS_URL=ws://localhost:8080/ws
+```
+
+## Realtime (WebSocket)
+
+If `VITE_WS_URL` is set, the app will connect and show toast notifications for incoming messages.
+Backend can send JSON like:
+
+```json
+{ "type": "REGISTRATION_CREATED", "message": "New registration" }
+```
+
+## Multi-language
+
+Added `i18next` (UZ/RU/EN). Switcher is in the sidebar/footer and top bar.
+Translations are in `src/lib/i18n.ts`.
+
 ## Roles
 | Role | Access |
 |------|--------|

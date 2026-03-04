@@ -1,30 +1,45 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
 import { eventsSvc } from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import { CalendarDays, MapPin, ArrowRight, Globe, Users, Clock } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import {
+  CalendarDays,
+  MapPin,
+  ArrowRight,
+  Globe,
+  Users,
+  Clock,
+} from "lucide-react";
 import { format } from "date-fns";
+import useEmblaCarousel from "embla-carousel-react";
+
+type CoversMap = Record<number, string>;
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
-  // ✅ ENV (prod/dev)
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || ""; // masalan: http://10.113.31.105:8081/api
-  const FILES_BASE = import.meta.env.VITE_FILES_BASE || "http://10.113.31.105:8081"; // /uploads shu hostda
+  const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
+  const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";
+
+  // ✅ API requestlar uchun: https://tripday.uz + /api + /...
+  const apiUrl = (p: string) =>
+    `${ORIGIN}${API_PREFIX}${p.startsWith("/") ? "" : "/"}${p}`;
+
+  // ✅ file/img uchun: https://tripday.uz + /uploads/...
+  // /api qo‘shilmaydi!
+  const fileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
+    return `${ORIGIN}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
 
   const [events, setEvents] = useState<any[]>([]);
   const [heroIdx, setHeroIdx] = useState(0);
-
-  // ✅ eventId -> first image path (cover)
-  const [covers, setCovers] = useState<Record<number, string>>({});
-
-  // ✅ helper: /uploads/... -> http://host/uploads/...
-  const toFileUrl = (p: string) => {
-    if (!p) return "";
-    if (p.startsWith("http://") || p.startsWith("https://")) return p;
-    return `${FILES_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
-  };
+  const [covers, setCovers] = useState<CoversMap>({});
 
   const heroImages = [
     "/slides/1.png",
@@ -49,7 +64,7 @@ export default function HomePage() {
       id: 2,
       name: "Visit Samarkand",
       website: "https://samarkand.travel/",
-      logo: "/partners/2.jpeg",
+      logo: "/partners/2.png",
     },
     {
       id: 3,
@@ -67,7 +82,7 @@ export default function HomePage() {
       id: 5,
       name: "Silk Road Destinations",
       website: "https://silkroaddestinations.com/",
-      logo: "/partners/5.jpeg",
+      logo: "/partners/5.png",
     },
   ];
 
@@ -76,22 +91,35 @@ export default function HomePage() {
 
     (async () => {
       try {
+        // Sizning service’ingiz qanday yozilganini bilmayman,
+        // shu sabab events listni o‘zingizdagi eventsSvc orqali olamiz
         const list = await eventsSvc.getUpcoming();
         if (!alive) return;
 
         const arr = Array.isArray(list) ? list : [];
         setEvents(arr);
 
-        // ✅ har event uchun 1ta cover: GET /api/events/:id/images
+        // ✅ Har event uchun cover: GET /api/events/:id/images
         const results = await Promise.all(
           arr.slice(0, 12).map(async (ev: any) => {
             const id = Number(ev?.id);
             if (!id) return [id, ""] as const;
 
             try {
-              const r = await fetch(`${API_BASE}/events/${id}/images`);
-              const imgs = r.ok ? await r.json() : [];
-              const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+              const r = await fetch(apiUrl(`/events/${id}/images`), {
+                method: "GET",
+                headers: {
+                  Accept: "application/json",
+                },
+                // cookie auth bo‘lsa kerak bo‘lishi mumkin:
+                // credentials: "include",
+              });
+
+              if (!r.ok) return [id, ""] as const;
+
+              const imgs = await r.json();
+              const first =
+                Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
               return [id, first] as const;
             } catch {
               return [id, ""] as const;
@@ -101,9 +129,9 @@ export default function HomePage() {
 
         if (!alive) return;
 
-        const map: Record<number, string> = {};
-        for (const [id, url] of results) {
-          if (id && url) map[id] = url;
+        const map: CoversMap = {};
+        for (const [id, path] of results) {
+          if (id && path) map[id] = path; // path masalan: /uploads/...
         }
         setCovers(map);
       } catch {
@@ -114,16 +142,30 @@ export default function HomePage() {
     return () => {
       alive = false;
     };
-  }, [API_BASE]);
+  }, [ORIGIN, API_PREFIX]);
 
   useEffect(() => {
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       setHeroIdx((p) => (p + 1) % heroImages.length);
     }, 4000);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, []);
 
   const top = events.slice(0, 6);
+
+  // Partners slider
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
+  useEffect(() => {
+    if (!emblaApi) return;
+    const timer = setInterval(() => {
+      try {
+        emblaApi.scrollNext();
+      } catch {
+        // ignore
+      }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [emblaApi]);
 
   return (
     <div
@@ -133,6 +175,18 @@ export default function HomePage() {
       }}
     >
       <Navbar />
+
+      {/* Translator (Language switcher) */}
+      <div
+        style={{
+          position: "fixed",
+          top: 18,
+          right: 18,
+          zIndex: 50,
+        }}
+      >
+        <LanguageSwitcher />
+      </div>
 
       {/* HERO */}
       <section
@@ -145,34 +199,22 @@ export default function HomePage() {
           backgroundPosition: "center",
         }}
       >
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} />
-
         <div
           style={{
             position: "absolute",
-            width: 600,
-            height: 600,
-            borderRadius: "50%",
-            background: "radial-gradient(circle,rgba(124,106,247,0.1),transparent 70%)",
-            top: -200,
-            right: -100,
-            pointerEvents: "none",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 400,
-            height: 400,
-            borderRadius: "50%",
-            background: "radial-gradient(circle,rgba(240,98,146,0.07),transparent 70%)",
-            bottom: -100,
-            left: -50,
-            pointerEvents: "none",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
           }}
         />
 
-        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
           <div
             style={{
               display: "flex",
@@ -206,8 +248,8 @@ export default function HomePage() {
                 lineHeight: 1.75,
               }}
             >
-              Konsertlar, forumlar, ko'rgazmalar — barchasi bir platformada. Ro'yxatdan o'ting va
-              sevimli tadbirlaringizni qoldirmang.
+              Konsertlar, forumlar, ko'rgazmalar — barchasi bir platformada.
+              Ro'yxatdan o'ting va sevimli tadbirlaringizni qoldirmang.
             </p>
 
             <div
@@ -222,7 +264,11 @@ export default function HomePage() {
               <Link
                 to="/events"
                 className="btn btn-primary"
-                style={{ textDecoration: "none", padding: "13px 30px", fontSize: 18 }}
+                style={{
+                  textDecoration: "none",
+                  padding: "13px 30px",
+                  fontSize: 18,
+                }}
               >
                 Tadbirlar <ArrowRight size={16} />
               </Link>
@@ -231,7 +277,11 @@ export default function HomePage() {
                 <Link
                   to="/register"
                   className="btn btn-ghost"
-                  style={{ textDecoration: "none", padding: "13px 30px", fontSize: 18 }}
+                  style={{
+                    textDecoration: "none",
+                    padding: "13px 30px",
+                    fontSize: 18,
+                  }}
                 >
                   Ro'yxatdan o'tish
                 </Link>
@@ -249,27 +299,33 @@ export default function HomePage() {
               }}
             >
               {[
-                { icon: <CalendarDays size={18} />, val: `${events.length}+`, label: "Tadbir" },
-                { icon: <Users size={18} />, val: `${orgs.length}+`, label: "Tashkilot" },
-                { icon: <Globe size={18} />, val: "1000+", label: "Foydalanuvchilar" },
+                {
+                  icon: <CalendarDays size={18} />,
+                  val: `${events.length}+`,
+                  label: "Tadbir",
+                },
+                {
+                  icon: <Users size={18} />,
+                  val: `${orgs.length}+`,
+                  label: "Tashkilot",
+                },
+                {
+                  icon: <Globe size={18} />,
+                  val: "1000+",
+                  label: "Foydalanuvchilar",
+                },
               ].map((s, i) => (
                 <div key={i}>
-                  <div style={{ color: "#cbd5e1", marginBottom: 6 }}>{s.icon}</div>
-                  <div
-                    style={{
-                      fontFamily: "Arial, sans-serif",
-                      fontWeight: 800,
-                      fontSize: 26,
-                      color: "#fff",
-                    }}
-                  >
+                  <div style={{ color: "#cbd5e1", marginBottom: 6 }}>
+                    {s.icon}
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 26, color: "#fff" }}>
                     {s.val}
                   </div>
                   <div
                     style={{
                       fontSize: 11,
                       color: "#94a3b8",
-                      fontFamily: "Arial, sans-serif",
                       textTransform: "uppercase",
                       letterSpacing: "0.07em",
                     }}
@@ -284,7 +340,9 @@ export default function HomePage() {
       </section>
 
       {/* EVENTS */}
-      <section style={{ padding: "10px 24px 80px", maxWidth: 1200, margin: "0 auto" }}>
+      <section
+        style={{ padding: "10px 24px 80px", maxWidth: 1200, margin: "0 auto" }}
+      >
         <div
           style={{
             display: "flex",
@@ -294,27 +352,25 @@ export default function HomePage() {
           }}
         >
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <span
-                style={{
-                  fontSize: 20,
-                  color: "#0f172a",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 700,
-                }}
-              >
-                Yaqin tadbirlar
-              </span>
-            </div>
+            <span
+              style={{
+                fontSize: 20,
+                color: "#0f172a",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontWeight: 700,
+              }}
+            >
+              Yaqin tadbirlar
+            </span>
             <h2
               style={{
                 letterSpacing: "0.08em",
-                fontFamily: "Arial, sans-serif",
                 textTransform: "uppercase",
                 fontWeight: 700,
                 fontSize: "clamp(12px,2vw,22px)",
                 color: "#0f172a",
+                marginTop: 6,
               }}
             >
               Nima bo'lyapti
@@ -331,9 +387,20 @@ export default function HomePage() {
         </div>
 
         {top.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(15,23,42,0.7)" }}>
-            <CalendarDays size={40} style={{ margin: "0 auto 12px", opacity: 0.25, color: "#0f172a" }} />
-            <p style={{ margin: "0 auto 12px", opacity: 0.8, color: "#0f172a" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 0",
+              color: "rgba(15,23,42,0.7)",
+            }}
+          >
+            <CalendarDays
+              size={40}
+              style={{ margin: "0 auto 12px", opacity: 0.25, color: "#0f172a" }}
+            />
+            <p
+              style={{ margin: "0 auto 12px", opacity: 0.8, color: "#0f172a" }}
+            >
               Hozircha yaqin tadbirlar yo'q
             </p>
           </div>
@@ -347,8 +414,10 @@ export default function HomePage() {
           >
             {top.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
+
+              // cover path (backend qaytargan): /uploads/....
               const coverPath = covers[Number(ev.id)];
-              const coverUrl = coverPath ? toFileUrl(coverPath) : "";
+              const cover = coverPath ? fileUrl(coverPath) : "";
 
               return (
                 <Link
@@ -365,34 +434,54 @@ export default function HomePage() {
                     border: "1px solid rgba(15,23,42,0.08)",
                     boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
                     backdropFilter: "blur(6px)",
-                    transition: "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
+                    transition:
+                      "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
+                    e.currentTarget.style.boxShadow =
+                      "0 16px 36px rgba(2,6,23,0.10)";
                     e.currentTarget.style.borderColor = "rgba(99,102,241,0.22)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0px)";
-                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
+                    e.currentTarget.style.boxShadow =
+                      "0 10px 26px rgba(2,6,23,0.06)";
                     e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
                   }}
                 >
                   {/* cover */}
-                  <div style={{ position: "relative", height: 150, background: "rgba(15,23,42,0.06)" }}>
-                    {coverUrl ? (
+                  <div
+                    style={{
+                      position: "relative",
+                      height: 190,
+                      background: "rgba(15,23,42,0.06)",
+                    }}
+                  >
+                    {cover ? (
                       <img
-                        src={coverUrl} // ✅ FIX
+                        src={cover} // ✅ /api qo‘shilmaydi
                         alt={ev.title}
                         loading="lazy"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                        onError={(e) => {
+                          // fallback (optional)
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
+                        }}
                       />
                     ) : (
                       <div
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                          background:
+                            "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
                         }}
                       />
                     )}
@@ -421,7 +510,6 @@ export default function HomePage() {
                       >
                         <div
                           style={{
-                            fontFamily: "Arial, sans-serif",
                             fontWeight: 800,
                             fontSize: 18,
                             color: "#0f172a",
@@ -466,9 +554,8 @@ export default function HomePage() {
                   <div style={{ padding: "16px 18px 18px" }}>
                     <h3
                       style={{
-                        fontFamily: "Syne,sans-serif",
                         fontWeight: 800,
-                        fontSize: 15,
+                        fontSize: 16,
                         color: "#0f172a",
                         marginBottom: 8,
                         lineHeight: 1.3,
@@ -502,7 +589,6 @@ export default function HomePage() {
                           color: "rgba(15,23,42,0.70)",
                           fontWeight: 600,
                         }}
-                        
                       >
                         <MapPin size={10} />
                         {ev.locationName}
@@ -559,83 +645,86 @@ export default function HomePage() {
 
               <h2
                 style={{
-                  fontFamily: "Arial, sans-serif",
                   fontWeight: 800,
                   fontSize: "clamp(20px,3vw,50px)",
                   color: "#0f172a",
                   marginTop: 8,
                 }}
               >
-                Ishonchli havolalar
+                {t("home.trustedLinks")}
               </h2>
             </div>
 
             <div
-              style={{
-                display: "flex",
-                gap: 16,
-                overflowX: "auto",
-                scrollBehavior: "smooth",
-                paddingBottom: 8,
-              }}
+              ref={emblaRef}
+              style={{ overflow: "hidden", padding: "20px, 0" }}
             >
-              {orgs.map((org: any) => (
-                <a
-                  key={org.id}
-                  href={org.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    flex: "0 0 auto",
-                    minWidth: 180,
-                    background: "rgba(255,255,255,0.88)",
-                    border: "1px solid rgba(15,23,42,0.08)",
-                    borderRadius: 16,
-                    padding: "18px 20px",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    transition: "all 0.25s ease",
-                    boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
-                  }}
-                >
-                  <img
-                    src={org.logo}
-                    alt={org.name}
-                    loading="lazy"
-                    style={{
-                      width: 52,
-                      height: 52,
-                      objectFit: "contain",
-                      display: "block",
-                      margin: "0 auto 10px",
-                      filter:
-                        "brightness(0) saturate(100%) invert(27%) sepia(92%) saturate(3800%) hue-rotate(205deg) brightness(95%) contrast(105%)",
-                    }}
-                  />
+              <div style={{ display: "flex", gap: 16 }}>
+                {orgs.map((org: any) => (
+                  <div key={org.id} style={{ flex: "0 0 340px" }}>
+                    <a
+                      href={org.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        background: "rgba(255,255,255,0.92)",
+                        border: "1px solid rgba(15,23,42,0.10)",
+                        borderRadius: 20,
+                        padding: "22px",
+                        textAlign: "center",
+                        textDecoration: "none",
+                        transition: "all 0.25s ease",
+                        boxShadow: "0 12px 30px rgba(2,6,23,0.08)",
+                        height: 170, // 🔹 hamma card bir xil balandlik
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-4px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 18px 44px rgba(2,6,23,0.12)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "none";
+                        e.currentTarget.style.boxShadow =
+                          "0 12px 30px rgba(2,6,23,0.08)";
+                      }}
+                    >
+                      <img
+                        src={org.logo}
+                        alt={org.name}
+                        loading="lazy"
+                        style={{
+                          width: 86,
+                          height: 86,
+                          objectFit: "contain",
+                          marginBottom: 10,
+                        }}
+                      />
 
-                  <div
-                    style={{
-                      width: 300,
-                      margin: "0 auto",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#0f172a",
-                      textAlign: "center",
-                      fontFamily: "Arial, sans-serif",
-                    }}
-                  >
-                    {org.name}
+                      <div
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 800,
+                          color: "#0f172a",
+                          fontFamily: "DM Sans, sans-serif",
+                          lineHeight: 1.25,
+
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2, // 🔹 faqat 2 qator
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          height: 38, // 🔹 text uchun fixed joy
+                        }}
+                      >
+                        {org.name}
+                      </div>
+                    </a>
                   </div>
-                </a>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -659,17 +748,12 @@ export default function HomePage() {
             gap: 10,
           }}
         >
-          <span
-            style={{
-              fontFamily: "Syne,sans-serif",
-              fontWeight: 700,
-              fontSize: 14,
-              color: "#0f172a",
-            }}
-          >
+          <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>
             🎫 TripDay
           </span>
-          <span style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>© 2025 TripDay</span>
+          <span style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
+            © 2025 TripDay
+          </span>
         </div>
       </footer>
     </div>

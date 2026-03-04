@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -45,6 +47,7 @@ export default function Shell({ items, title, children }: Props) {
   const { user, logout } = useAuth();
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
 
   const sidebarContent = (
     <>
@@ -76,7 +79,7 @@ export default function Shell({ items, title, children }: Props) {
           <div>
             <div
               style={{
-                fontFamily: "Syne,sans-serif",
+                fontFamily: "DM Sans,sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 color: "var(--text)",
@@ -130,6 +133,10 @@ export default function Shell({ items, title, children }: Props) {
         <div
           style={{ padding: "12px 10px", borderTop: "1px solid var(--border)" }}
         >
+          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Language</div>
+            <LanguageSwitcher />
+          </div>
           <div
             style={{
               padding: "10px 12px",
@@ -165,7 +172,7 @@ export default function Shell({ items, title, children }: Props) {
             }}
           >
             <LogOut size={15} />
-            <span>Chiqish</span>
+            <span>{t("common.logout")}</span>
           </button>
         </div>
       )}
@@ -185,8 +192,8 @@ export default function Shell({ items, title, children }: Props) {
         className={`sidebar${open ? " open" : ""}`}
         style={{
           padding: 0,
-          background: "#151a2e",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72))",
+          borderRight: "1px solid var(--border)",
         }}
       >
         {sidebarContent}
@@ -213,13 +220,17 @@ export default function Shell({ items, title, children }: Props) {
           </button>
           <div
             style={{
-              fontFamily: "Syne,sans-serif",
+              fontFamily: "DM Sans,sans-serif",
               fontWeight: 700,
               fontSize: 14,
               color: "var(--text)",
             }}
           >
             {title}
+          </div>
+
+          <div style={{ marginLeft: "auto" }}>
+            <LanguageSwitcher />
           </div>
         </div>
 

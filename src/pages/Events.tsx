@@ -17,23 +17,26 @@ function statusOk(ev: any) {
 export default function EventsPage() {
   const { hasRole } = useAuth();
 
-  // ✅ ENV (prod/dev)
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || ""; // masalan: http://10.113.31.105:8081/api
-  const FILES_BASE = import.meta.env.VITE_FILES_BASE || "http://10.113.31.105:8081"; // /uploads shu hostda
+  // ✅ ENV
+  const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
+  const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";
+
+  // ✅ API request (JSON) -> /api
+  const apiUrl = (p: string) =>
+    `${ORIGIN}${API_PREFIX}${p.startsWith("/") ? "" : "/"}${p}`;
+
+  // ✅ File/Image url -> NO /api
+  const fileUrl = (p: string) => {
+    if (!p) return "";
+    if (p.startsWith("http://") || p.startsWith("https://")) return p;
+    return `${ORIGIN}${p.startsWith("/") ? "" : "/"}${p}`;
+  };
 
   const [all, setAll] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ eventId -> first image path (cover)
   const [covers, setCovers] = useState<Record<number, string>>({});
-
-  // ✅ helper: /uploads/... -> http://host/uploads/...
-  const toFileUrl = (p: string) => {
-    if (!p) return "";
-    if (p.startsWith("http://") || p.startsWith("https://")) return p;
-    return `${FILES_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
-  };
 
   useEffect(() => {
     let alive = true;
@@ -46,29 +49,36 @@ export default function EventsPage() {
         const list = Array.isArray(d) ? d : [];
         setAll(list);
 
-        // ✅ rasmlarini parallel olib kelamiz (har event uchun 1ta cover yetadi)
+        // ✅ rasmlar: GET /api/events/:id/images
         const results = await Promise.all(
           list.map(async (ev: any) => {
             const id = Number(ev?.id);
             if (!id) return [id, ""] as const;
 
             try {
-              const r = await fetch(`${API_BASE}/events/${id}/images`);
+              const r = await fetch(apiUrl(`/events/${id}/images`), {
+                method: "GET",
+                headers: { Accept: "application/json" },
+                // cookie auth bo‘lsa:
+                // credentials: "include",
+              });
+
               const imgs = r.ok ? await r.json() : [];
               const first =
                 Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
-              return [id, first] as const;
+
+              return [id, first] as const; // first: "/uploads/...." yoki full url
             } catch {
               return [id, ""] as const;
             }
-          }),
+          })
         );
 
         if (!alive) return;
 
         const map: Record<number, string> = {};
-        for (const [id, url] of results) {
-          if (id && url) map[id] = url;
+        for (const [id, path] of results) {
+          if (id && path) map[id] = path;
         }
         setCovers(map);
       } finally {
@@ -79,7 +89,7 @@ export default function EventsPage() {
     return () => {
       alive = false;
     };
-  }, [API_BASE]);
+  }, [ORIGIN, API_PREFIX]);
 
   const isAdmin = hasRole("ADMIN") || hasRole("SUPER_ADMIN");
   const isOrg = hasRole("TOUR_ORGANIZATION");
@@ -100,7 +110,7 @@ export default function EventsPage() {
       (ev) =>
         ev.title?.toLowerCase().includes(x) ||
         ev.locationName?.toLowerCase().includes(x) ||
-        ev.description?.toLowerCase().includes(x),
+        ev.description?.toLowerCase().includes(x)
     );
   }, [visible, q]);
 
@@ -136,14 +146,7 @@ export default function EventsPage() {
           }}
         />
 
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
+        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <h1
             style={{
               fontFamily: "Poppins, sans-serif",
@@ -156,14 +159,7 @@ export default function EventsPage() {
             Tadbirlar
           </h1>
 
-          <p
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontSize: 15,
-              marginBottom: 24,
-              opacity: 0.9,
-            }}
-          >
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, marginBottom: 24, opacity: 0.9 }}>
             {filtered.length} ta tadbir mavjud
           </p>
 
@@ -201,13 +197,7 @@ export default function EventsPage() {
       {/* Grid */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {loading ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
-              gap: 20,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
@@ -222,61 +212,26 @@ export default function EventsPage() {
               >
                 <div style={{ height: 3, background: "rgba(15,23,42,0.12)" }} />
                 <div style={{ padding: 20 }}>
-                  <div
-                    style={{
-                      height: 14,
-                      borderRadius: 6,
-                      background: "rgba(15,23,42,0.08)",
-                      marginBottom: 10,
-                    }}
-                    className="animate-shimmer"
-                  />
-                  <div
-                    style={{
-                      height: 14,
-                      borderRadius: 6,
-                      background: "rgba(15,23,42,0.08)",
-                      width: "60%",
-                    }}
-                    className="animate-shimmer"
-                  />
+                  <div style={{ height: 14, borderRadius: 6, background: "rgba(15,23,42,0.08)", marginBottom: 10 }} />
+                  <div style={{ height: 14, borderRadius: 6, background: "rgba(15,23,42,0.08)", width: "60%" }} />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "80px 0",
-              color: "rgba(15,23,42,0.65)",
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(15,23,42,0.65)" }}>
             <CalendarDays size={48} style={{ margin: "0 auto 16px", opacity: 0.25 }} />
-            <h3
-              style={{
-                fontFamily: "Syne,sans-serif",
-                fontSize: 18,
-                color: "#0f172a",
-                marginBottom: 8,
-              }}
-            >
+            <h3 style={{ fontFamily: "Syne,sans-serif", fontSize: 18, color: "#0f172a", marginBottom: 8 }}>
               Tadbir topilmadi
             </h3>
             <p style={{ fontSize: 14 }}>Qidiruv so'zini o'zgartiring</p>
           </div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
-              gap: 20,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
             {filtered.map((ev, i) => {
               const d = new Date(ev.eventDateTime);
               const coverPath = covers[Number(ev.id)];
-              const coverUrl = coverPath ? toFileUrl(coverPath) : "";
+              const coverUrl = coverPath ? fileUrl(coverPath) : ""; // ✅ IMG faqat ORIGIN bilan
 
               return (
                 <Link
@@ -293,52 +248,30 @@ export default function EventsPage() {
                     border: "1px solid rgba(15,23,42,0.08)",
                     boxShadow: "0 10px 26px rgba(2,6,23,0.06)",
                     backdropFilter: "blur(6px)",
-                    transition:
-                      "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,6,23,0.10)";
-                    e.currentTarget.style.borderColor = "rgba(99,102,241,0.22)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0px)";
-                    e.currentTarget.style.boxShadow = "0 10px 26px rgba(2,6,23,0.06)";
-                    e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
+                    transition: "transform .2s ease, box-shadow .2s ease, border-color .2s ease",
                   }}
                 >
-                  {/* ✅ cover image */}
+                  {/* cover image */}
                   <div style={{ position: "relative", height: 160, background: "rgba(15,23,42,0.06)" }}>
                     {coverUrl ? (
                       <img
-                        src={coverUrl} // ✅ FIX
+                        src={coverUrl}
                         alt={ev.title}
                         loading="lazy"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         onError={(e) => {
-                          // agar fayl topilmasa fallback ko‘rsatamiz
                           (e.currentTarget as HTMLImageElement).style.display = "none";
                         }}
                       />
-                    ) : null}
-
-                    {/* fallback (rasm bo'lmasa) */}
-                    {!coverUrl && (
+                    ) : (
                       <div
                         style={{
                           width: "100%",
                           height: "100%",
-                          background:
-                            "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
+                          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.12))",
                         }}
                       />
                     )}
-
 
                     <div
                       style={{
@@ -362,26 +295,10 @@ export default function EventsPage() {
                           minWidth: 54,
                         }}
                       >
-                        <div
-                          style={{
-                            fontFamily: "Syne,sans-serif",
-                            fontWeight: 800,
-                            fontSize: 18,
-                            color: "#4f46e5",
-                            lineHeight: 1,
-                          }}
-                        >
+                        <div style={{ fontWeight: 800, fontSize: 18, color: "#4f46e5", lineHeight: 1 }}>
                           {isNaN(d.getTime()) ? "—" : format(d, "dd")}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 9,
-                            color: "rgba(15,23,42,0.65)",
-                            textTransform: "uppercase",
-                            marginTop: 2,
-                            fontWeight: 700,
-                          }}
-                        >
+                        <div style={{ fontSize: 9, color: "rgba(15,23,42,0.65)", textTransform: "uppercase", marginTop: 2, fontWeight: 700 }}>
                           {isNaN(d.getTime()) ? "" : format(d, "MMM")}
                         </div>
                       </div>
@@ -408,16 +325,7 @@ export default function EventsPage() {
 
                   {/* content */}
                   <div style={{ padding: "16px 18px 18px" }}>
-                    <h3
-                      style={{
-                        fontFamily: "Syne,sans-serif",
-                        fontWeight: 800,
-                        fontSize: 15,
-                        color: "#0f172a",
-                        marginBottom: 8,
-                        lineHeight: 1.3,
-                      }}
-                    >
+                    <h3 style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", marginBottom: 8, lineHeight: 1.3 }}>
                       {ev.title}
                     </h3>
 
@@ -439,17 +347,7 @@ export default function EventsPage() {
                     <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <MapPin size={11} color="rgba(15,23,42,0.55)" />
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "rgba(15,23,42,0.65)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: 160,
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span style={{ fontSize: 11, color: "rgba(15,23,42,0.65)", maxWidth: 160, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {ev.locationName}
                         </span>
                       </div>
@@ -457,13 +355,7 @@ export default function EventsPage() {
                       {!isNaN(d.getTime()) && (
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <Clock size={11} color="rgba(15,23,42,0.55)" />
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "rgba(15,23,42,0.65)",
-                              fontWeight: 600,
-                            }}
-                          >
+                          <span style={{ fontSize: 11, color: "rgba(15,23,42,0.65)", fontWeight: 600 }}>
                             {format(d, "HH:mm")}
                           </span>
                         </div>
