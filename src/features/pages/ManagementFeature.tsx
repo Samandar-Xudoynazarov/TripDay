@@ -104,16 +104,16 @@ export default function ManagementFeature() {
         managementApi.getTourOrganizations(),
       ]);
 
-      setUsers(Array.isArray(u.data) ? u.data : []);
-      setTourOrgs(Array.isArray(t.data) ? t.data : []);
+      setUsers((Array.isArray(u.data) ? u.data : []).filter((x: any) => x?.enabled !== false));
+      setTourOrgs((Array.isArray(t.data) ? t.data : []).filter((x: any) => x?.enabled !== false));
 
       if (isSuper) {
         const [a, s] = await Promise.all([
           managementApi.getAdmins(),
           managementApi.getSuperAdmins(),
         ]);
-        setAdmins(Array.isArray(a.data) ? a.data : []);
-        setSuperAdmins(Array.isArray(s.data) ? s.data : []);
+        setAdmins((Array.isArray(a.data) ? a.data : []).filter((x: any) => x?.enabled !== false));
+        setSuperAdmins((Array.isArray(s.data) ? s.data : []).filter((x: any) => x?.enabled !== false));
       } else {
         setAdmins([]);
         setSuperAdmins([]);

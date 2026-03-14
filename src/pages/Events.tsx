@@ -5,6 +5,8 @@ import { eventsSvc } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import { CalendarDays, MapPin, Search, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { getEventDate, isUpcomingEvent } from "@/lib/event-utils";
 
 function statusOk(ev: any) {
   const s = String(ev?.status || "").toUpperCase();
@@ -16,6 +18,7 @@ function statusOk(ev: any) {
 
 export default function EventsPage() {
   const { hasRole } = useAuth();
+  const { t } = useTranslation();
 
   // ✅ ENV
   const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
@@ -98,8 +101,7 @@ export default function EventsPage() {
     const base = isAdmin || isOrg ? all : all.filter(statusOk);
     const now = Date.now();
     return base.filter((ev) => {
-      const d = +new Date(ev.eventDateTime);
-      return isNaN(d) ? true : d >= now;
+      return isUpcomingEvent(ev, now);
     });
   }, [all, isAdmin, isOrg]);
 
@@ -156,11 +158,11 @@ export default function EventsPage() {
               letterSpacing: "-0.5px",
             }}
           >
-            Tadbirlar
+            {t("eventsPage.title")}
           </h1>
 
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, marginBottom: 24, opacity: 0.9 }}>
-            {filtered.length} ta tadbir mavjud
+            {t("eventsPage.available", { count: filtered.length })}
           </p>
 
           <div style={{ position: "relative", maxWidth: 480 }}>
@@ -178,7 +180,7 @@ export default function EventsPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Qidirish..."
+              placeholder={t("eventsPage.searchPlaceholder")}
               className="inp"
               style={{
                 paddingLeft: 38,
@@ -222,14 +224,14 @@ export default function EventsPage() {
           <div style={{ textAlign: "center", padding: "80px 0", color: "rgba(15,23,42,0.65)" }}>
             <CalendarDays size={48} style={{ margin: "0 auto 16px", opacity: 0.25 }} />
             <h3 style={{ fontFamily: "Syne,sans-serif", fontSize: 18, color: "#0f172a", marginBottom: 8 }}>
-              Tadbir topilmadi
+              {t("eventsPage.emptyTitle")}
             </h3>
-            <p style={{ fontSize: 14 }}>Qidiruv so'zini o'zgartiring</p>
+            <p style={{ fontSize: 14 }}>{t("eventsPage.emptyText")}</p>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 20 }}>
             {filtered.map((ev, i) => {
-              const d = new Date(ev.eventDateTime);
+              const d = getEventDate(ev) || new Date();
               const coverPath = covers[Number(ev.id)];
               const coverUrl = coverPath ? fileUrl(coverPath) : ""; // ✅ IMG faqat ORIGIN bilan
 

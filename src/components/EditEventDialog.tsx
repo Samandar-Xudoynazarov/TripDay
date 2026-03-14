@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +15,6 @@ import { Pencil, MapPin } from "lucide-react";
 
 function toLocalInputValue(iso?: string) {
   if (!iso) return "";
-  // ISO like 2026-03-04T10:30:00 -> datetime-local expects yyyy-MM-ddTHH:mm
   const s = String(iso);
   if (s.length >= 16) return s.slice(0, 16);
   return s;
@@ -78,7 +76,6 @@ export default function EditEventDialog({
     eventDateTimeLocal: toLocalInputValue(event?.eventDateTime),
   }));
 
-  // re-sync when opening (helps when list reloads)
   const reset = () => {
     setForm({
       title: event?.title ?? "",
@@ -135,9 +132,10 @@ export default function EditEventDialog({
     }
   };
 
+  /* Input uchun stil */
   const inp =
-    "mt-1 bg-white/10 border-white/20 text-white placeholder:text-sky-200/60 " +
-    "focus-visible:ring-blue-300 focus-visible:ring-offset-0";
+    "mt-1 border-slate-300 text-slate-900 placeholder:text-slate-400 " +
+    "focus-visible:ring-amber-400 focus-visible:ring-offset-0 bg-white";
 
   return (
     <Dialog
@@ -149,40 +147,50 @@ export default function EditEventDialog({
     >
       <DialogTrigger asChild>
         {triggerVariant === "icon" ? (
-          <Button
-            variant="secondary"
+          /* 🟡 Sariq — icon */
+          <button
             disabled={!!disabled}
-            className="px-2 bg-white/10 text-white hover:bg-white/20 border border-white/20"
             title="Tahrirlash"
+            className="inline-flex items-center justify-center rounded-xl
+                       bg-gradient-to-r from-amber-500 to-yellow-400
+                       px-3 py-2 text-sm font-semibold text-white shadow-md
+                       transition hover:scale-[1.02] hover:from-amber-600 hover:to-yellow-500
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             <Pencil className="w-4 h-4" />
-          </Button>
+          </button>
         ) : (
-          <Button
-            variant="secondary"
+          /* 🟡 Sariq — button */
+          <button
             disabled={!!disabled}
-            className="gap-2 bg-white/10 text-white hover:bg-white/20 border border-white/20"
             title="Tahrirlash"
+            className="inline-flex items-center gap-2 rounded-xl
+                       bg-gradient-to-r from-amber-500 to-yellow-400
+                       px-4 py-2.5 text-sm font-semibold text-white shadow-md
+                       transition hover:scale-[1.02] hover:from-amber-600 hover:to-yellow-500
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             <Pencil className="w-4 h-4" />
             Tahrirlash
-          </Button>
+          </button>
         )}
       </DialogTrigger>
 
+      {/* ✅ Oq fon — form modali */}
       <DialogContent
         className="w-[calc(100vw-24px)] sm:max-w-xl max-h-[85vh] overflow-y-auto
-                   rounded-2xl border border-white/10
-                   bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600
-                   text-sky-50 shadow-2xl"
+                   rounded-2xl border border-slate-200
+                   bg-white text-slate-900 shadow-2xl"
       >
         <DialogHeader>
-          <DialogTitle className="text-sky-50">Tadbirni tahrirlash</DialogTitle>
+          <DialogTitle className="text-slate-900 font-bold text-lg">
+            Tadbirni tahrirlash
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <Label className="text-sky-100">Sarlavha</Label>
+            <Label className="text-slate-700 font-semibold">Sarlavha</Label>
             <Input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -192,7 +200,7 @@ export default function EditEventDialog({
           </div>
 
           <div>
-            <Label className="text-sky-100">Tavsif</Label>
+            <Label className="text-slate-700 font-semibold">Tavsif</Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -202,8 +210,8 @@ export default function EditEventDialog({
           </div>
 
           <div>
-            <Label className="text-sky-100 flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Joy nomi
+            <Label className="text-slate-700 font-semibold flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-amber-500" /> Joy nomi
             </Label>
             <Input
               value={form.locationName}
@@ -215,7 +223,7 @@ export default function EditEventDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-sky-100">Latitude</Label>
+              <Label className="text-slate-700 font-semibold">Latitude</Label>
               <Input
                 value={form.latitude}
                 onChange={(e) => setForm({ ...form, latitude: e.target.value })}
@@ -224,7 +232,7 @@ export default function EditEventDialog({
               />
             </div>
             <div>
-              <Label className="text-sky-100">Longitude</Label>
+              <Label className="text-slate-700 font-semibold">Longitude</Label>
               <Input
                 value={form.longitude}
                 onChange={(e) => setForm({ ...form, longitude: e.target.value })}
@@ -235,7 +243,7 @@ export default function EditEventDialog({
           </div>
 
           <div>
-            <Label className="text-sky-100">Sana / vaqt</Label>
+            <Label className="text-slate-700 font-semibold">Sana / vaqt</Label>
             <Input
               type="datetime-local"
               value={form.eventDateTimeLocal}
@@ -248,13 +256,29 @@ export default function EditEventDialog({
           </div>
 
           <div className="flex gap-2 justify-end pt-2">
-            <Button
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center gap-2 rounded-xl
+                         border border-slate-300 bg-slate-100
+                         px-4 py-2.5 text-sm font-semibold text-slate-700
+                         transition hover:bg-slate-200"
+            >
+              Bekor
+            </button>
+
+            {/* 🟡 Sariq — Saqlash */}
+            <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-xl
+                         bg-gradient-to-r from-amber-500 to-yellow-400
+                         px-4 py-2.5 text-sm font-semibold text-white shadow-md
+                         transition hover:scale-[1.02] hover:from-amber-600 hover:to-yellow-500
+                         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {submitting ? "Saqlanmoqda..." : "Saqlash"}
-            </Button>
+            </button>
           </div>
         </form>
       </DialogContent>

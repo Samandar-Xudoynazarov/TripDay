@@ -25,7 +25,8 @@ type CreateEventPayload = {
   locationName: string;
   latitude: number;
   longitude: number;
-  eventDateTime: string; // "YYYY-MM-DDTHH:mm:ss"
+  startDate: string;
+  endDate: string;
   organizationId: number;
   files: File[];
 };
@@ -115,7 +116,8 @@ export default function DashboardPage() {
       fd.append("latitude", String(payload.latitude));
       fd.append("longitude", String(payload.longitude));
 
-      fd.append("eventDateTime", payload.eventDateTime);
+      fd.append("startDate", payload.startDate);
+      fd.append("endDate", payload.endDate);
       fd.append("organizationId", String(org.id));
 
       payload.files.forEach((f) => fd.append("files", f));

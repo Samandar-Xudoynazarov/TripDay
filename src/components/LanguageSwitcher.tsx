@@ -1,6 +1,12 @@
+import { Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-export default function LanguageSwitcher() {
+type Props = {
+  compact?: boolean;
+  className?: string;
+};
+
+export default function LanguageSwitcher({ compact = false, className = "" }: Props) {
   const { i18n } = useTranslation();
   const value = i18n.language?.split("-")[0] || "uz";
 
@@ -10,23 +16,21 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <select
-      value={value}
-      onChange={(e) => set(e.target.value)}
-      style={{
-        background: "var(--surface2)",
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: "6px 10px",
-        fontSize: 12,
-        color: "var(--text)",
-        outline: "none",
-      }}
-      aria-label="Language"
+    <label
+      className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-slate-700 shadow-sm backdrop-blur ${className}`.trim()}
+      aria-label="Language switcher"
     >
-      <option value="uz">UZ</option>
-      <option value="ru">RU</option>
-      <option value="en">EN</option>
-    </select>
+      <Languages className={compact ? "h-4 w-4" : "h-4 w-4 text-blue-600"} />
+      <select
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className={`bg-transparent outline-none ${compact ? "text-xs font-semibold" : "text-sm font-medium"}`}
+        aria-label="Language"
+      >
+        <option value="uz">O'zбекча</option>
+        <option value="ru">Русский</option>
+        <option value="en">English</option>
+      </select>
+    </label>
   );
 }

@@ -14,10 +14,10 @@ export default defineConfig({
     port: parseInt(process.env.VITE_PORT || '3000'),
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || process.env.VITE_BACKEND_URL || 'https://tripday.uz',
+        target: process.env.VITE_API_PROXY_TARGET || process.env.VITE_BACKEND_URL || 'http://10.186.164.105:8081',
         changeOrigin: true,
         secure: false,
-      },
+      }, 
     },
   },
   build: {

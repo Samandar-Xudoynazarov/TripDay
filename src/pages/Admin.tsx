@@ -4,6 +4,7 @@ import { useAuth } from "../lib/auth";
 import { orgsSvc, adminSvc, usersSvc, eventsSvc } from "@/lib/api";
 import { normalizeRoles } from "@/lib/auth";
 import Shell from "@/components/Shell";
+import EditEventDialog from "@/components/EditEventDialog";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -124,11 +125,11 @@ export default function AdminPage() {
         adminsPromise,
       ]);
       setOrgs(toArr(o));
-      setUsers(toArr(u));
+      setUsers(toArr(u).filter((x: any) => x?.enabled !== false));
       setEvents(toArr(ev));
       setPendingEvents(toArr(pEv));
-      setTourOrgs(toArr(tOrgs));
-      setAdmins(toArr(adms));
+      setTourOrgs(toArr(tOrgs).filter((x: any) => x?.enabled !== false));
+      setAdmins(toArr(adms).filter((x: any) => x?.enabled !== false));
     } catch {
       toast.error("Ma'lumotlar yuklanmadi");
     } finally {
@@ -247,10 +248,31 @@ export default function AdminPage() {
     toast.success("Tashkilotchi qilindi");
     load();
   };
+
+  const updateEvent = async (eventId: number, payload: any) => {
+    try {
+      await eventsSvc.update(eventId, payload);
+      toast.success("Event yangilandi");
+      await load();
+    } catch {
+      toast.error("Eventni yangilab bo'lmadi");
+      throw new Error("Event update failed");
+    }
+  };
   const toggleUser = async (uid: number, enabled: boolean) => {
-    await usersSvc.setEnabled(uid, !enabled);
-    toast.success(enabled ? "O'chirildi" : "Yoqildi");
-    load();
+    try {
+      if (enabled) {
+        if (!confirm("Userni butunlay o'chirasizmi?")) return;
+        await usersSvc.delete(uid);
+        toast.success("User o'chirildi");
+      } else {
+        await usersSvc.setEnabled(uid, true);
+        toast.success("User yoqildi");
+      }
+      load();
+    } catch {
+      toast.error("Userni yangilab bo'lmadi");
+    }
   };
 
   const SCard = ({ val, label, icon, accent, onClick, bg }: any) => (
@@ -1053,7 +1075,23 @@ export default function AdminPage() {
                                   Ko'rish
                                 </Link>
 
-                                {/* Event o'chirish: faqat tashkilotchi (TOUR_ORGANIZATION)da qoladi */}
+                                <EditEventDialog
+                                  event={ev}
+                                  onSave={updateEvent}
+                                  triggerVariant="icon"
+                                />
+
+                                <button
+                                  className="inline-flex items-center justify-center
+                                     rounded-lg px-3 py-2 text-xs font-semibold
+                                     bg-rose-400/15 text-rose-100
+                                     border border-rose-300/20
+                                     hover:bg-rose-400/25 transition"
+                                  onClick={() => deleteEv(ev.id)}
+                                  title="O'chirish"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
 
                                 {isPending && (
                                   <>

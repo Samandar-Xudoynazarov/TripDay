@@ -13,6 +13,7 @@
  */
 
 import { api, safeArr } from './auth';
+import { isUpcomingEvent, sortByEventDate } from './event-utils';
 
 // ─── safeArray alias ─────────────────────────────────────────────────────────
 export function safeArray<T = any>(res: any): T[] { return safeArr<T>(res); }
@@ -138,20 +139,25 @@ export const eventsSvc = {
   getUpcoming: async () => {
     const all = await api.get('/events').then(r => safeArr(r));
     const now = Date.now();
-    return all.filter((e: any) => { const d = +new Date(e.eventDateTime); return !isNaN(d) && d >= now; })
-              .sort((a: any, b: any) => +new Date(a.eventDateTime) - +new Date(b.eventDateTime));
+    return sortByEventDate(all.filter((e: any) => isUpcomingEvent(e, now)));
   },
   create: (data: any) => {
     if (data instanceof FormData) return api.post('/events', data, { headers: { 'Content-Type': 'multipart/form-data' } });
     const form = new FormData();
-    ['title','description','locationName','eventDateTime'].forEach(k => form.append(k, data[k]));
+    ['title','description','locationName'].forEach(k => form.append(k, data[k]));
+    if (data.startDate) form.append('startDate', data.startDate);
+    if (data.endDate) form.append('endDate', data.endDate);
+    if (data.eventDateTime && !data.startDate) form.append('eventDateTime', data.eventDateTime);
     form.append('latitude',       String(data.latitude));
     form.append('longitude',      String(data.longitude));
     form.append('organizationId', String(data.organizationId));
     (data.files || []).forEach((f: File) => form.append('files', f));
     return api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
-  update:       (id: number, data: any) => api.put(`/events/${id}`, data),
+  update:       (id: number, data: any) => {
+    if (data instanceof FormData) return api.put(`/events/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return api.put(`/events/${id}`, data);
+  },
   delete:       (id: number) => api.delete(`/events/${id}`),
   getImages:    (id: number) => api.get(`/events/${id}/images`).then(r => safeArr(r)),
   uploadImages: (eventId: number, files: File[]) => {
@@ -166,13 +172,16 @@ export const eventsApi = {
   getUpcoming: () => api.get('/events').then(res => {
     const now = new Date();
     const list = Array.isArray(res.data) ? res.data : [];
-    return { ...res, data: list.filter((e: any) => { const d = e?.eventDateTime ? new Date(e.eventDateTime) : null; return d && !isNaN(+d) && d >= now; }).sort((a: any, b: any) => +new Date(a.eventDateTime) - +new Date(b.eventDateTime)) };
+    return { ...res, data: sortByEventDate(list.filter((e: any) => isUpcomingEvent(e, +now))) };
   }),
   create: (data: { title: string; description: string; locationName: string; latitude: number; longitude: number; eventDateTime: string; organizationId: number; files?: File[] }) => {
     const form = new FormData();
     form.append('title', data.title); form.append('description', data.description); form.append('locationName', data.locationName);
     form.append('latitude', String(data.latitude)); form.append('longitude', String(data.longitude));
-    form.append('eventDateTime', data.eventDateTime); form.append('organizationId', String(data.organizationId));
+    if (data.startDate) form.append('startDate', data.startDate);
+    if (data.endDate) form.append('endDate', data.endDate);
+    if (data.eventDateTime && !data.startDate) form.append('eventDateTime', data.eventDateTime);
+    form.append('organizationId', String(data.organizationId));
     (data.files || []).forEach(f => form.append('files', f));
     return api.post('/events', form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },

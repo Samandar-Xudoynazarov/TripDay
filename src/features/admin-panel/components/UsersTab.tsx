@@ -156,7 +156,7 @@ export default function UsersTab({
                   )}
 
                   <Button variant="outline" size="sm" onClick={() => onToggleEnabled(u.id, u.enabled)}>
-                    {u.enabled ? "O'chirish" : "Yoqish"}
+                    {u.enabled ? "Delete" : "Yoqish"}
                   </Button>
 
                   {canMakeAdmin && (

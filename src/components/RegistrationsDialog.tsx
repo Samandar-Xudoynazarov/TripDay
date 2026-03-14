@@ -35,8 +35,7 @@ function downloadCsv(filename: string, rows: Record<string, string>[]) {
 
   const escape = (x: string) => {
     const v = String(x ?? "");
-    if (/[",\n]/.test(v)) return `"${v.replaceAll('"', '""')}"`;
-    return v;
+    if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;    return v;
   };
 
   const header = cols.map(escape).join(",");
@@ -107,7 +106,7 @@ export default function RegistrationsDialog({
 
   const doDownload = () => {
     const name = (eventTitle || `event-${eventId}`)
-      .replaceAll(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
       .slice(0, 60);
     downloadCsv(`${name}-registrations.csv`, rows);
   };
@@ -116,76 +115,91 @@ export default function RegistrationsDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {triggerVariant === "icon" ? (
-          <Button
-            variant="secondary"
-            className="px-2 bg-white/10 text-white hover:bg-white/20 border border-white/20"
-            title="Ro‘yxatdan o‘tganlar"
+          /* 🔵 Ko'k — icon */
+          <button
+            title="Ro'yxatdan o'tganlar"
+            className="inline-flex items-center justify-center rounded-xl
+                       bg-gradient-to-r from-blue-600 to-sky-500
+                       px-3 py-2 text-sm font-semibold text-white shadow-md
+                       transition hover:scale-[1.02] hover:from-blue-700 hover:to-sky-600"
           >
             <Users className="w-4 h-4" />
-          </Button>
+          </button>
         ) : (
-          <Button
-            variant="secondary"
-            className="gap-2 bg-white/10 text-white hover:bg-white/20 border border-white/20"
+          /* 🔵 Ko'k — button */
+          <button
+            className="inline-flex items-center gap-2 rounded-xl
+                       bg-gradient-to-r from-blue-600 to-sky-500
+                       px-4 py-2.5 text-sm font-semibold text-white shadow-md
+                       transition hover:scale-[1.02] hover:from-blue-700 hover:to-sky-600"
           >
-            <Users className="w-4 h-4" /> Ro‘yxatdan o‘tganlar
-          </Button>
+            <Users className="w-4 h-4" />
+            Ro'yxatdan o'tganlar
+          </button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-3xl">
+      {/* ✅ Oq fon modal */}
+      <DialogContent className="max-w-3xl bg-white text-slate-900 border border-slate-200 shadow-2xl rounded-2xl">
         <DialogHeader>
-          <DialogTitle>
-            Ro‘yxatdan o‘tganlar ({regs.length})
+          <DialogTitle className="text-slate-900 font-bold text-lg">
+            Ro'yxatdan o'tganlar ({regs.length})
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="text-sm text-muted-foreground truncate">
+          <div className="text-sm text-slate-500 truncate">
             {eventTitle ? eventTitle : `Event #${eventId}`}
           </div>
-          <Button
+
+          {/* 🔵 Ko'k — CSV yuklab olish */}
+          <button
             onClick={doDownload}
             disabled={rows.length === 0}
-            className="gap-2"
+            className="inline-flex items-center gap-2 rounded-xl
+                       bg-gradient-to-r from-blue-600 to-sky-500
+                       px-4 py-2 text-sm font-semibold text-white shadow-md
+                       transition hover:scale-[1.02] hover:from-blue-700 hover:to-sky-600
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            <Download className="w-4 h-4" /> Yuklab olish (CSV)
-          </Button>
+            <Download className="w-4 h-4" />
+            Yuklab olish (CSV)
+          </button>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
           <div className="max-h-[55vh] overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-background">
-                <tr className="border-b">
-                  <th className="text-left p-2 w-12">#</th>
-                  <th className="text-left p-2">Full name</th>
-                  <th className="text-left p-2">Email</th>
-                  <th className="text-left p-2">Phone</th>
-                  <th className="text-left p-2">Registered at</th>
+              <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider w-12">#</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Full name</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider">Registered at</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td className="p-4" colSpan={5}>
+                    <td className="px-3 py-4 text-slate-400" colSpan={5}>
                       Yuklanmoqda...
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td className="p-4" colSpan={5}>
-                      Hali ro‘yxatdan o‘tganlar yo‘q
+                    <td className="px-3 py-4 text-slate-400" colSpan={5}>
+                      Hali ro'yxatdan o'tganlar yo'q
                     </td>
                   </tr>
                 ) : (
                   rows.map((r) => (
-                    <tr key={r["#"]} className="border-b last:border-b-0">
-                      <td className="p-2">{r["#"]}</td>
-                      <td className="p-2">{r["Full name"]}</td>
-                      <td className="p-2">{r["Email"]}</td>
-                      <td className="p-2">{r["Phone"]}</td>
-                      <td className="p-2">{r["Registered at"]}</td>
+                    <tr key={r["#"]} className="hover:bg-slate-50 transition">
+                      <td className="px-3 py-2.5 text-slate-400 text-xs">{r["#"]}</td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-800">{r["Full name"]}</td>
+                      <td className="px-3 py-2.5 text-slate-600">{r["Email"]}</td>
+                      <td className="px-3 py-2.5 text-slate-600">{r["Phone"]}</td>
+                      <td className="px-3 py-2.5 text-slate-500 text-xs">{r["Registered at"]}</td>
                     </tr>
                   ))
                 )}

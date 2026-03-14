@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -31,7 +31,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
-h1,h2,h3,h4,h5,h6 { font-family: 'DM Sans', sans-serif; }
+h1,h2,h3,h4,h5,h6 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacing: -0.02em; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -54,7 +54,7 @@ h1,h2,h3,h4,h5,h6 { font-family: 'DM Sans', sans-serif; }
 .s1{animation-delay:.05s} .s2{animation-delay:.1s} .s3{animation-delay:.15s} .s4{animation-delay:.2s} .s5{animation-delay:.25s} .s6{animation-delay:.3s}
 
 .gradient-text {
-  background: linear-gradient(135deg, #0f172a 5%, var(--accent) 45%, var(--accent2) 90%);
+  background: linear-gradient(135deg, #dddddd 10%, var(--accent) 45%, var(--accent2) 90%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -67,9 +67,9 @@ h1,h2,h3,h4,h5,h6 { font-family: 'DM Sans', sans-serif; }
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .card-hover:hover {
-  border-color: rgba(124,106,247,0.3);
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(124,106,247,0.1);
+  border-color: rgba(37,99,235,0.24);
+  transform: translateY(-6px);
+  box-shadow: 0 18px 42px rgba(15,23,42,0.12), 0 0 0 1px rgba(37,99,235,0.08);
 }
 .card-hover:active {
   transform: translateY(0px) scale(0.99);
@@ -278,4 +278,20 @@ h1,h2,h3,h4,h5,h6 { font-family: 'DM Sans', sans-serif; }
   left: -100px;
   pointer-events: none;
   z-index: 0;
+}
+/* ── Responsive: Tailwind md: utility support ─────────────── */
+@media (min-width: 768px) {
+  .md\:hidden { display: none !important; }
+  .hidden.md\:flex, .md\:flex { display: flex !important; }
+}
+@media (max-width: 767px) {
+  .hidden { display: none !important; }
+  /* Hero section font & padding */
+  section[style*="padding: \"80px"] {
+    padding: 48px 16px 40px !important;
+  }
+  /* Event grid single column */
+  .events-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

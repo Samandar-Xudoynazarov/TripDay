@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { eventsSvc, adminSvc, registrationsApi } from "@/lib/api";
 import Shell from "@/components/Shell";
 import RegistrationsDialog from "@/components/RegistrationsDialog";
+import EditEventDialog from "@/components/EditEventDialog";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -22,13 +23,13 @@ export default function AdminEventDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
   const { hasRole, isLoading, user } = useAuth();
+
   const isSuper = hasRole("SUPER_ADMIN");
   const base = isSuper ? "/super-admin" : "/admin";
   const label = isSuper ? "Super Admin" : "Admin";
 
   const eventId = Number(id);
 
-  // ✅ ENV
   const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
   const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -46,11 +47,11 @@ export default function AdminEventDetailPage() {
   const [isPending, setIsPending] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
-
   const [images, setImages] = useState<string[]>([]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: images.length > 1,
+    align: "start",
   });
 
   const scrollPrev = () => emblaApi?.scrollPrev();
@@ -64,10 +65,12 @@ export default function AdminEventDetailPage() {
 
   useEffect(() => {
     if (isLoading) return;
+
     if (!user || (!hasRole("ADMIN") && !hasRole("SUPER_ADMIN"))) {
       nav("/login");
       return;
     }
+
     load();
   }, [id, isLoading]);
 
@@ -77,8 +80,6 @@ export default function AdminEventDetailPage() {
     try {
       const [evData, imgs] = await Promise.all([
         eventsSvc.getById(eventId),
-
-        // ✅ images API
         fetch(apiUrl(`/events/${eventId}/images`))
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
@@ -100,13 +101,19 @@ export default function AdminEventDetailPage() {
   const loadRegs = async (eid: number) => {
     const res = await registrationsApi.getAll();
     const all = Array.isArray(res.data) ? res.data : [];
-    return all.filter((r: any) => Number(r?.eventId ?? r?.event?.id) === Number(eid));
+    return all.filter(
+      (r: any) => Number(r?.eventId ?? r?.event?.id) === Number(eid),
+    );
   };
 
   const approve = async () => {
-    await adminSvc.approveEvent(eventId);
-    toast.success("Tasdiqlandi");
-    load();
+    try {
+      await adminSvc.approveEvent(eventId);
+      toast.success("Tasdiqlandi");
+      load();
+    } catch {
+      toast.error("Tasdiqlab bo'lmadi");
+    }
   };
 
   const reject = async () => {
@@ -115,82 +122,118 @@ export default function AdminEventDetailPage() {
       return;
     }
 
-    await adminSvc.rejectEvent(eventId, reason);
-    toast.success("Rad etildi");
-    nav(`${base}?tab=events`);
+    try {
+      await adminSvc.rejectEvent(eventId, reason);
+      toast.success("Rad etildi");
+      nav(`${base}?tab=events`);
+    } catch {
+      toast.error("Rad etib bo'lmadi");
+    }
   };
 
+  const updateEvent = async (eventId: number, payload: any) => {
+    try {
+      await eventsSvc.update(eventId, payload);
+      toast.success("Event yangilandi");
+      await load();
+    } catch {
+      toast.error("Eventni yangilab bo'lmadi");
+      throw new Error("Event update failed");
+    }
+  };
 
+  const deleteEvent = async () => {
+    if (!confirm("Eventni butunlay o'chirasizmi?")) return;
 
-  if (loading)
+    try {
+      await eventsSvc.delete(eventId);
+      toast.success("Event o'chirildi");
+      nav(`${base}?tab=events`);
+    } catch {
+      toast.error("Eventni o'chirib bo'lmadi");
+    }
+  };
+
+  if (loading) {
     return (
       <Shell items={items} title={label}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "100vh",
-          }}
-        >
-          <div className="spinner" />
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         </div>
       </Shell>
     );
+  }
 
   const d = ev ? new Date(ev.eventDateTime) : null;
-  const imageUrls = images.map(fileUrl);
+  const imageUrls = images.map(fileUrl).filter(Boolean);
 
   return (
     <Shell items={items} title={label}>
-      <div style={{ padding: "28px", maxWidth: 760 }}>
+      <div className="mx-auto w-full max-w-4xl px-4 py-7 md:px-6">
+        {/* Back button */}
         <button
-          className="btn btn-ghost btn-sm"
-          style={{ marginBottom: 24 }}
           onClick={() => nav(`${base}?tab=events`)}
+          className="mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow"
         >
           <ArrowLeft size={14} />
           Orqaga
         </button>
 
-        {/* ✅ SLIDER */}
+        {/* ── IMAGE SLIDER (EventDetailPage uslubida) ── */}
         {imageUrls.length > 0 && (
           <div
-            className="card"
             style={{
-              marginBottom: 20,
+              marginBottom: 14,
               overflow: "hidden",
               borderRadius: 18,
+              background: "rgba(255,255,255,0.92)",
+              border: "1px solid rgba(15,23,42,0.08)",
+              boxShadow: "0 12px 30px rgba(2,6,23,0.06)",
             }}
           >
             <div style={{ position: "relative" }}>
+              {/* Embla viewport */}
               <div ref={emblaRef} style={{ overflow: "hidden" }}>
                 <div style={{ display: "flex" }}>
                   {imageUrls.map((src, i) => (
                     <div key={i} style={{ flex: "0 0 100%" }}>
                       <img
                         src={src}
+                        alt={`Event image ${i + 1}`}
                         style={{
                           width: "100%",
-                          height: 320,
+                          height: 360,
                           objectFit: "cover",
+                          display: "block",
                         }}
+                        loading="lazy"
                       />
                     </div>
                   ))}
                 </div>
               </div>
 
+              {/* Nav arrows */}
               {imageUrls.length > 1 && (
                 <>
                   <button
                     onClick={scrollPrev}
-                    className="btn"
+                    type="button"
+                    aria-label="prev"
                     style={{
                       position: "absolute",
                       left: 10,
                       top: "50%",
                       transform: "translateY(-50%)",
+                      padding: "8px 10px",
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.75)",
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      backdropFilter: "blur(10px)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
                     <ChevronLeft size={18} />
@@ -198,12 +241,22 @@ export default function AdminEventDetailPage() {
 
                   <button
                     onClick={scrollNext}
-                    className="btn"
+                    type="button"
+                    aria-label="next"
                     style={{
                       position: "absolute",
                       right: 10,
                       top: "50%",
                       transform: "translateY(-50%)",
+                      padding: "8px 10px",
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.75)",
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      backdropFilter: "blur(10px)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
                     <ChevronRight size={18} />
@@ -214,100 +267,126 @@ export default function AdminEventDetailPage() {
           </div>
         )}
 
+        {/* ── MAIN CARD ── */}
         {ev && (
-          <div className="card anim-up">
-            <div
-              style={{
-                height: 4,
-                background:
-                  "linear-gradient(90deg,var(--accent),var(--accent2))",
-              }}
-            />
+          <div className="overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-cyan-400" />
 
-            <div style={{ padding: "28px" }}>
-              <h1
-                style={{
-                  fontFamily: "Syne,sans-serif",
-                  fontWeight: 800,
-                  fontSize: 24,
-                  marginBottom: 10,
-                }}
-              >
+            <div className="p-6 md:p-7">
+              <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
                 {ev.title}
               </h1>
 
-              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              {/* Meta chips */}
+              <div className="flex flex-wrap gap-3">
                 {d && !isNaN(d.getTime()) && (
-                  <span className="tag">
-                    <Clock size={13} /> {format(d, "dd MMM yyyy, HH:mm")}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200">
+                    <Clock size={13} />
+                    {format(d, "dd MMM yyyy, HH:mm")}
                   </span>
                 )}
 
-                <span className="tag">
-                  <MapPin size={13} /> {ev.locationName}
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                  <MapPin size={13} />
+                  {ev.locationName}
                 </span>
 
                 {ev.organizationName && (
-                  <span className="tag">
-                    <Building2 size={13} /> {ev.organizationName}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 ring-1 ring-violet-200">
+                    <Building2 size={13} />
+                    {ev.organizationName}
                   </span>
                 )}
               </div>
 
-              <p style={{ marginTop: 20 }}>{ev.description}</p>
+              <p className="mt-5 whitespace-pre-line text-base leading-7 text-slate-700">
+                {ev.description}
+              </p>
 
-              <div style={{ marginTop: 16 }}>
+              {/* ── ACTION BUTTONS ── */}
+              <div className="mt-6 flex flex-wrap gap-3">
+                {/* 🔵 Ko'k — Ro'yxatdan o'tganlar */}
                 <RegistrationsDialog
                   eventId={eventId}
                   eventTitle={ev?.title}
                   triggerVariant="button"
                   load={loadRegs}
                 />
+
+                {/* 🟡 Sariq — Tahrirlash */}
+                <EditEventDialog event={ev} onSave={updateEvent} />
+
+                {/* 🔴 Qizil — O'chirish */}
+                <button
+                  onClick={deleteEvent}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-rose-600"
+                >
+                  Eventni o'chirish
+                </button>
               </div>
 
+              {/* ── PENDING ACTIONS ── */}
               {isPending && (
-                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                  <button className="btn" onClick={approve}>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {/* 🟢 Yashil — Tasdiqlash */}
+                  <button
+                    onClick={approve}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-emerald-600 hover:to-green-500"
+                  >
                     <CheckCircle size={15} />
                     Tasdiqlash
                   </button>
 
+                  {/* 🔴 Qizil — Rad etish */}
                   <button
-                    className="btn btn-danger"
                     onClick={() => setRejectOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-pink-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-pink-600"
                   >
                     <XCircle size={15} />
                     Rad etish
                   </button>
                 </div>
               )}
-
-              {/* Event o'chirish: faqat tashkilotchi (TOUR_ORGANIZATION)da qoladi */}
             </div>
           </div>
         )}
       </div>
 
+      {/* ── RAD ETISH MODAL ── */}
       {rejectOpen && (
-        <div className="modal-bg" onClick={() => setRejectOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Rad etish sababi</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setRejectOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-4 text-xl font-bold text-slate-900">
+              Rad etish sababi
+            </h3>
 
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={4}
-              className="inp"
+              placeholder="Sababni kiriting..."
+              className="mb-4 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-200"
             />
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn btn-danger" onClick={reject}>
+            <div className="flex flex-wrap gap-3">
+              {/* 🔴 Qizil — Rad etish */}
+              <button
+                onClick={reject}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-rose-600"
+              >
                 Rad etish
               </button>
 
+              {/* Neytral — Bekor */}
               <button
-                className="btn btn-ghost"
                 onClick={() => setRejectOpen(false)}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
               >
                 Bekor
               </button>
