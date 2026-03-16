@@ -36,10 +36,19 @@ export default function AdminEventDetailPage() {
   const apiUrl = (p: string) =>
     `${ORIGIN}${API_PREFIX}${p.startsWith("/") ? "" : "/"}${p}`;
 
-  const fileUrl = (p: string) => {
+  const fileUrl = (p?: string | null) => {
     if (!p) return "";
-    if (p.startsWith("http")) return p;
-    return `${ORIGIN}${p.startsWith("/") ? "" : "/"}${p}`;
+
+    let value = String(p).trim();
+    if (!value) return "";
+
+    // full url bo‘lsa ham normalize qilamiz
+    value = value.replace("/uploads/events/", "/uploads/");
+
+    if (/^https?:\/\//i.test(value)) return value;
+
+    const normalizedPath = value.startsWith("/") ? value : `/${value}`;
+    return `${ORIGIN}${normalizedPath}`;
   };
 
   const [ev, setEv] = useState<any>(null);
