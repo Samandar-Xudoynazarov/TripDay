@@ -19,7 +19,7 @@ import { isUpcomingEvent, sortByEventDate } from './event-utils';
 export function safeArray<T = any>(res: any): T[] { return safeArr<T>(res); }
 
 // ─── URL helpers ──────────────────────────────────────────────────────────────
-export const BACKEND     = import.meta.env.VITE_BACKEND_URL || '';
+export const BACKEND     = String(import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/$/, '');
 export const BACKEND_URL = BACKEND;
 
 export function imgUrl(path: string): string {

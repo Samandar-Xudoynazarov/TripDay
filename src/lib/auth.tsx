@@ -9,7 +9,31 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import axios from 'axios';
 
 // ─── API Base ─────────────────────────────────────────────────────────────────
-export const API = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+function resolveApiBase(): string {
+  const rawApiBase = String(import.meta.env.VITE_API_BASE_URL || '').trim();
+  const cleanApiBase = rawApiBase.split('#')[0].trim().replace(/\/$/, '');
+  const backendUrl = String(import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/$/, '');
+  const isBrowser = typeof window !== 'undefined';
+  const isLocal = isBrowser
+    ? ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    : false;
+
+  if (cleanApiBase.startsWith('http://') || cleanApiBase.startsWith('https://')) {
+    return cleanApiBase;
+  }
+
+  if (cleanApiBase && cleanApiBase !== '/api') {
+    return cleanApiBase;
+  }
+
+  if (!isLocal && backendUrl) {
+    return `${backendUrl}/api`;
+  }
+
+  return '/api';
+}
+
+export const API = resolveApiBase();
 
 const api = axios.create({ baseURL: API });
 const noAuth = axios.create({ baseURL: API });

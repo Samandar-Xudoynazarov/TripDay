@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/auth';
 import { Ticket, ArrowRight, KeyRound, RefreshCw } from 'lucide-react';
+import { COUNTRIES } from '@/constants/countries';
 
 export default function RegisterPage() {
   const { user, isLoading, verifyRegister, redirectPath } = useAuth();
@@ -60,13 +61,26 @@ export default function RegisterPage() {
               { k:'fullName', label:'Ism Familiya', ph:'Asilbek Karimov' },
               { k:'email', label:'Email', ph:'asilbek@example.com', type:'email' },
               { k:'phone', label:'Telefon', ph:'+998901234567' },
-              { k:'country', label:'Davlat', ph:'Uzbekistan' },
             ].map(({ k, label, ph, type }) => (
               <div key={k}>
                 <label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:5, display:'block', fontWeight:500 }}>{label}</label>
                 <input type={type||'text'} required value={(form as any)[k]} onChange={F(k)} placeholder={ph} className="inp" />
               </div>
             ))}
+            <div>
+              <label style={{ fontSize:12, color:'var(--text-muted)', marginBottom:5, display:'block', fontWeight:500 }}>Davlat</label>
+              <select
+                required
+                value={form.country}
+                onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
+                className="inp"
+                style={{ appearance:'none', cursor:'pointer' }}
+              >
+                {COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
             <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop:4 }}>
               {loading ? <span className="spinner" style={{ width:18, height:18, borderWidth:2 }} /> : <><span>Ro'yxatdan o'tish</span><ArrowRight size={16} /></>}
             </button>
