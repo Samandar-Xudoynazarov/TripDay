@@ -15,12 +15,27 @@ import {
 import { format } from "date-fns";
 import useEmblaCarousel from "embla-carousel-react";
 import { getEventDate, deduplicateEvents } from "@/lib/event-utils";
+import { useSEO } from "@/hooks/useSEO";
 
 type CoversMap = Record<number, string>;
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+
+  useSEO({
+    title: 'TripDay — Tadbirlar, Mehmonxonalar va Sayohatlar Platformasi',
+    description: 'Konsertlar, forumlar, ko\'rgazmalar, mehmonxonalar — barchasi bir platformada. Ro\'yxatdan o\'ting va sevimli tadbirlaringizni o\'tkazib yubormang.',
+    url: 'https://tripday.uz/',
+    extraKeywords: [
+      // O'zbek
+      'O\'zbekistonda tadbirlar', 'sayohat platformasi', 'onlayn chipta', 'tadbir platformasi',
+      // Rus
+      'платформа мероприятий Узбекистан', 'онлайн регистрация на мероприятия', 'события сегодня Ташкент',
+      // Ingliz
+      'event platform Uzbekistan', 'online event registration', 'things to do in Tashkent', 'travel platform Uzbekistan',
+    ],
+  });
 
   const ORIGIN = (
     import.meta.env.VITE_BACKEND_URL || "https://tripday.uz"
@@ -56,6 +71,7 @@ export default function HomePage() {
 
   const heroImages = useMemo(
     () => [
+      "/slides/01.png",
       "/slides/1.png",
       "/slides/2.png",
       "/slides/3.png",
@@ -84,7 +100,7 @@ export default function HomePage() {
     },
     {
       id: 3,
-      name: "Samarqand viloyati turizim tashkiloti",
+      name: "Samarqand viloyati Turizm boshqarmasi",
       website: "https://samarkandtourism.uz/",
       logo: "/partners/turizim.png",
     },
@@ -346,18 +362,7 @@ export default function HomePage() {
             >
               {t("home.nearbyEvents")}
             </span>
-            <h2
-              style={{
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                fontWeight: 700,
-                fontSize: "clamp(12px,2vw,22px)",
-                color: "#0f172a",
-                marginTop: 6,
-              }}
-            >
-              {t("home.whatHappening")}
-            </h2>
+            
           </div>
           <Link
             to="/events"

@@ -11,6 +11,7 @@ import {
   isUpcomingEvent,
   deduplicateEvents,
 } from "@/lib/event-utils";
+import { useSEO } from "@/hooks/useSEO";
 
 function statusOk(ev: any) {
   const s = String(ev?.status || "").toUpperCase();
@@ -23,6 +24,23 @@ function statusOk(ev: any) {
 export default function EventsPage() {
   const { hasRole } = useAuth();
   const { t } = useTranslation();
+
+  useSEO({
+    title: 'Tadbirlar — TripDay | События | Events',
+    description: 'O\'zbekistondagi eng yaxshi tadbirlar, konferensiyalar, festivallar va ko\'rgazmalar. Все мероприятия Узбекистана. Best events in Uzbekistan.',
+    url: 'https://tripday.uz/events',
+    extraKeywords: [
+      // O'zbek
+      'barcha tadbirlar', 'Samarqandda tadbirlar', 'Toshkentda tadbirlar', 'Buxoroda tadbirlar',
+      'yaqin tadbirlar ro\'yxati', 'hamma tadbirlar', 'konferensiya Toshkent', 'festival O\'zbekiston',
+      // Rus
+      'все мероприятия Узбекистана', 'мероприятия в Самарканде', 'ближайшие события',
+      'конференции Ташкент', 'фестивали Узбекистан', 'выставки Ташкент',
+      // Ingliz
+      'all events Uzbekistan', 'upcoming events Tashkent', 'upcoming events Samarkand',
+      'conferences Tashkent', 'festivals Uzbekistan', 'exhibitions Tashkent',
+    ],
+  });
 
   const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
   const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";

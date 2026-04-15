@@ -2,16 +2,96 @@
 <html lang="uz">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TripDay - Tadbirlar Platformasi</title>
-    <meta name="description" content="TripDay - Tadbirlar, konferensiyalar, festivallar va sayohatlarni kashf eting" />
+    <title>TripDay — Tadbirlar, Mehmonxonalar va Sayohatlar Platformasi</title>
+    <meta name="description" content="O'zbekistondagi konsertlar, forumlar, ko'rgazmalar, mehmonxonalar — barchasi bir platformada. Ro'yxatdan o'ting va sevimli tadbirlaringizni o'tkazib yubormang." />
+    <!-- Kalit so'zlar: o'zbek, rus, ingliz tillarida + shaharlar -->
+    <meta name="keywords" content="
+      tadbirlar, tadbir, samarqandda tadbirlar, toshkentda tadbirlar, buxoroda tadbirlar, namanganda tadbirlar, andijonday tadbirlar, farg'onada tadbirlar,
+      konsert, festival, forum, ko'rgazma, konferensiya, seminar, ekskursiya, sayohat, mehmonxona, hostel,
+      tripday, tripday.uz, o'zbekiston tadbirlari, yaqin tadbirlar, onlayn ro'yxatdan o'tish,
+      события, мероприятия, события в Самарканде, события в Ташкенте, события в Бухаре, события в Узбекистане,
+      концерт, фестиваль, форум, выставка, конференция, семинар, экскурсия, путешествие, гостиница,
+      events, events in Uzbekistan, events in Samarkand, events in Tashkent, events in Bukhara,
+      concert, festival, forum, exhibition, conference, seminar, tour, hotel, hostel,
+      uzbekistan events, upcoming events, online registration, tripday
+    " />
     <meta name="author" content="TripDay" />
+    <meta name="robots" content="index, follow" />
+    <meta name="google-site-verification" content="Vojs2tVwgMBCTibQdlVUTpQnUT17h5VjvavYk7xKf10" />
+    <link rel="canonical" href="https://tripday.uz/" />
 
-    <meta property="og:title" content="TripDay - Tadbirlar Platformasi" />
-    <meta property="og:description" content="Tadbirlar, konferensiyalar, festivallar va sayohatlarni kashf eting" />
+    <!-- Open Graph -->
+    <meta property="og:title" content="TripDay — Tadbirlar, Mehmonxonalar va Sayohatlar" />
+    <meta property="og:description" content="O'zbekistondagi eng yaxshi tadbirlar va mehmonxonalar bir platformada." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tripday.uz/" />
+    <meta property="og:image" content="https://tripday.uz/logo.png" />
+    <meta property="og:site_name" content="TripDay" />
+    <meta property="og:locale" content="uz_UZ" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- hreflang: Google ga 3 til borligini bildiradi -->
+    <link rel="alternate" hreflang="uz" href="https://tripday.uz/" />
+    <link rel="alternate" hreflang="ru" href="https://tripday.uz/" />
+    <link rel="alternate" hreflang="en" href="https://tripday.uz/" />
+    <link rel="alternate" hreflang="x-default" href="https://tripday.uz/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TripDay — Tadbirlar Platformasi" />
+    <meta name="twitter:description" content="O'zbekistondagi eng yaxshi tadbirlar va mehmonxonalar." />
+    <meta name="twitter:image" content="https://tripday.uz/logo.png" />
+
+    <!-- Structured data: Organization + WebSite (3 tilda qidiruv) -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "TripDay",
+        "alternateName": ["ТрипДэй", "TripDay Uzbekistan"],
+        "url": "https://tripday.uz",
+        "logo": "https://tripday.uz/logo.png",
+        "description": "O'zbekistondagi tadbirlar, mehmonxonalar va sayohatlar platformasi. Платформа мероприятий, отелей и путешествий в Узбекистане. Events, hotels and travel platform in Uzbekistan.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "UZ",
+          "addressLocality": "Toshkent",
+          "addressRegion": "Toshkent viloyati"
+        },
+        "areaServed": [
+          { "@type": "City", "name": "Toshkent" },
+          { "@type": "City", "name": "Samarqand" },
+          { "@type": "City", "name": "Buxoro" },
+          { "@type": "City", "name": "Namangan" },
+          { "@type": "City", "name": "Andijon" },
+          { "@type": "City", "name": "Farg'ona" },
+          { "@type": "Country", "name": "Uzbekistan" }
+        ],
+        "knowsLanguage": ["uz", "ru", "en"]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "TripDay",
+        "url": "https://tripday.uz",
+        "description": "Tadbirlar, mehmonxonalar va sayohatlar platformasi",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://tripday.uz/events?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        },
+        "inLanguage": ["uz", "ru", "en"]
+      }
+    ]
+    </script>
   </head>
 
   <body>

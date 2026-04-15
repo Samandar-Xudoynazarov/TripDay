@@ -36,7 +36,7 @@ export function isUpcomingEvent(event?: EventLike | null, now = Date.now()): boo
 // har guruhdan BIRINCHI (eng eski sanali) eventni qaytaradi.
 // Guruh ichidagi barcha eventlar representative eventning _siblings fieldiga qoyiladi.
 
-export type EventWithSiblings = {
+export type EventWithSiblings = EventLike & {
   _siblings: any[];   // shu guruhning barcha eventlari (kun tanlash uchun)
   _dateRange: string; // "16 Mar - 20 Mar" yoki "16 Mar" (bir kun bolsa)
   [key: string]: any;

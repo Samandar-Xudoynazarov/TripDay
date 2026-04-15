@@ -45,6 +45,9 @@ let refreshPromise: Promise<{ accessToken: string; refreshToken?: string }> | nu
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem('accessToken') || localStorage.getItem('token');
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  // Send current UI language so backend can return translated content if supported
+  const lang = localStorage.getItem('lang') || 'uz';
+  cfg.headers['Accept-Language'] = lang;
   return cfg;
 });
 

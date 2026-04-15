@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { eventsSvc, regsSvc, likesSvc, commentsSvc } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ImageSlider from "@/components/ImageSlider";
+import { useSEO, buildEventStructuredData } from "@/hooks/useSEO";
 import {
   MapPin,
   Clock,
@@ -238,6 +239,41 @@ export default function EventDetailPage() {
       setComments((c) => c.filter((x: any) => x.id !== cmId));
     } catch {}
   };
+
+  const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://tripday.uz';
+  useSEO(
+    ev
+      ? {
+          title: `${ev.title} — TripDay`,
+          description: ev.description?.slice(0, 160) || 'TripDay tadbirlar platformasi',
+          image: images[0] ? `${BACKEND}${images[0]}` : undefined,
+          url: `https://tripday.uz/events/${eventId}`,
+          type: 'event',
+          extraKeywords: [
+            ev.title,
+            ev.locationName,
+            `${ev.title} Toshkent`,
+            `${ev.title} O'zbekiston`,
+            `${ev.title} Uzbekistan`,
+            `${ev.title} событие`,
+            `${ev.title} мероприятие`,
+            ev.organizationName,
+          ].filter(Boolean) as string[],
+          structuredData: buildEventStructuredData({
+            title: ev.title,
+            description: ev.description,
+            locationName: ev.locationName,
+            latitude: Number(ev.latitude),
+            longitude: Number(ev.longitude),
+            eventDateTime: ev.eventDateTime,
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+            imageUrl: images[0] ? `${BACKEND}${images[0]}` : undefined,
+            organizationName: ev.organizationName,
+          }),
+        }
+      : { title: 'TripDay — Tadbir', url: `https://tripday.uz/events/${eventId}` }
+  );
 
   if (loading)
     return (
