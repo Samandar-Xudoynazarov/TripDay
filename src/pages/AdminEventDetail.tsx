@@ -57,6 +57,8 @@ export default function AdminEventDetailPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  // Ko'p kunlik tadbir: bir xil nom+tashkilotga ega pending kunlar
+  const [pendingSiblings, setPendingSiblings] = useState<any[]>([]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: images.length > 1,
@@ -87,18 +89,26 @@ export default function AdminEventDetailPage() {
     setLoading(true);
 
     try {
-      const [evData, imgs] = await Promise.all([
+      const [evData, imgs, pending] = await Promise.all([
         eventsSvc.getById(eventId),
         fetch(apiUrl(`/events/${eventId}/images`))
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
+        adminSvc.pendingEvents(),
       ]);
 
       setEv(evData);
       setImages(Array.isArray(imgs) ? imgs : []);
-
-      const pending = await adminSvc.pendingEvents();
       setIsPending(pending.some((p: any) => p.id === eventId));
+
+      // Bir xil nom + tashkilotga ega barcha pending kunlarni topamiz (siblings)
+      const siblings = pending.filter(
+        (p: any) =>
+          p.id !== eventId &&
+          String(p.title || "").trim() === String(evData.title || "").trim() &&
+          String(p.organizationId || "") === String(evData.organizationId || ""),
+      );
+      setPendingSiblings(siblings);
     } catch {
       toast.error("Tadbir topilmadi");
       nav(base);
@@ -115,25 +125,43 @@ export default function AdminEventDetailPage() {
     );
   };
 
-  const approve = async () => {
+  const approve = async (onlyCurrent = false) => {
     try {
-      await adminSvc.approveEvent(eventId);
-      toast.success("Tasdiqlandi");
+      const ids =
+        onlyCurrent || pendingSiblings.length === 0
+          ? [eventId]
+          : [eventId, ...pendingSiblings.map((s: any) => s.id)];
+
+      await Promise.all(ids.map((id) => adminSvc.approveEvent(id)));
+
+      toast.success(
+        ids.length > 1
+          ? `${ids.length} ta kun tasdiqlandi ✅`
+          : "Tasdiqlandi ✅",
+      );
       load();
     } catch {
       toast.error("Tasdiqlab bo'lmadi");
     }
   };
 
-  const reject = async () => {
+  const reject = async (onlyCurrent = false) => {
     if (!reason.trim()) {
       toast.error("Sabab kiriting");
       return;
     }
 
     try {
-      await adminSvc.rejectEvent(eventId, reason);
-      toast.success("Rad etildi");
+      const ids =
+        onlyCurrent || pendingSiblings.length === 0
+          ? [eventId]
+          : [eventId, ...pendingSiblings.map((s: any) => s.id)];
+
+      await Promise.all(ids.map((id) => adminSvc.rejectEvent(id, reason)));
+
+      toast.success(
+        ids.length > 1 ? `${ids.length} ta kun rad etildi` : "Rad etildi",
+      );
       nav(`${base}?tab=events`);
     } catch {
       toast.error("Rad etib bo'lmadi");
@@ -336,24 +364,45 @@ export default function AdminEventDetailPage() {
 
               {/* ── PENDING ACTIONS ── */}
               {isPending && (
-                <div className="mt-5 flex flex-wrap gap-3">
-                  {/* 🟢 Yashil — Tasdiqlash */}
-                  <button
-                    onClick={approve}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-emerald-600 hover:to-green-500"
-                  >
-                    <CheckCircle size={15} />
-                    Tasdiqlash
-                  </button>
+                <div className="mt-5 space-y-3">
+                  {/* Ko'p kunlik tadbir xabardorligi */}
+                  {pendingSiblings.length > 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      ⚠️ Bu <strong>{pendingSiblings.length + 1} kunlik</strong> tadbirning bir kuni.
+                      Qolgan <strong>{pendingSiblings.length} kun</strong> ham kutmoqda.
+                    </div>
+                  )}
 
-                  {/* 🔴 Qizil — Rad etish */}
-                  <button
-                    onClick={() => setRejectOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-pink-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-pink-600"
-                  >
-                    <XCircle size={15} />
-                    Rad etish
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    {/* 🟢 Hammasini tasdiqlash */}
+                    {pendingSiblings.length > 0 && (
+                      <button
+                        onClick={() => approve(false)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-emerald-600 hover:to-green-500"
+                      >
+                        <CheckCircle size={15} />
+                        Barcha {pendingSiblings.length + 1} kunni tasdiqlash
+                      </button>
+                    )}
+
+                    {/* 🟢 Faqat shu kunni tasdiqlash */}
+                    <button
+                      onClick={() => approve(true)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-400 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+                    >
+                      <CheckCircle size={15} />
+                      {pendingSiblings.length > 0 ? "Faqat shu kunni" : "Tasdiqlash"}
+                    </button>
+
+                    {/* 🔴 Rad etish */}
+                    <button
+                      onClick={() => setRejectOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-pink-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-pink-600"
+                    >
+                      <XCircle size={15} />
+                      Rad etish
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -384,12 +433,22 @@ export default function AdminEventDetailPage() {
             />
 
             <div className="flex flex-wrap gap-3">
-              {/* 🔴 Qizil — Rad etish */}
+              {/* 🔴 Hammasini rad etish */}
+              {pendingSiblings.length > 0 && (
+                <button
+                  onClick={() => reject(false)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-rose-600"
+                >
+                  Barcha {pendingSiblings.length + 1} kunni rad etish
+                </button>
+              )}
+
+              {/* 🔴 Faqat shu kunni rad etish */}
               <button
-                onClick={reject}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02] hover:from-red-700 hover:to-rose-600"
+                onClick={() => reject(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-400 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
               >
-                Rad etish
+                {pendingSiblings.length > 0 ? "Faqat shu kunni rad etish" : "Rad etish"}
               </button>
 
               {/* Neytral — Bekor */}
