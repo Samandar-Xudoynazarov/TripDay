@@ -111,7 +111,6 @@ function MiniCalendar({
     let value = String(p).trim();
     if (!value) return "";
 
-    // full url bo‘lsa ham normalize qilamiz
     value = value.replace("/uploads/events/", "/uploads/");
 
     if (/^https?:\/\//i.test(value)) return value;

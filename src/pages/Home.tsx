@@ -38,7 +38,7 @@ export default function HomePage() {
   });
 
   const ORIGIN = (
-    import.meta.env.VITE_BACKEND_URL || "https://tripday.uz" || "http://10.207.208.105:8081"
+    import.meta.env.VITE_BACKEND_URL || "https://tripday.uz"
   ).replace(/\/+$/, "");
   const API_PREFIX = (import.meta.env.VITE_API_BASE_URL || "/api").replace(
     /\/+$/,
@@ -56,7 +56,6 @@ export default function HomePage() {
     let value = String(p).trim();
     if (!value) return "";
 
-    // full url bo‘lsa ham normalize qilamiz
     value = value.replace("/uploads/events/", "/uploads/");
 
     if (/^https?:\/\//i.test(value)) return value;
