@@ -38,7 +38,7 @@ export default function HomePage() {
   });
 
   const ORIGIN = (
-    import.meta.env.VITE_BACKEND_URL || "https://tripday.uz"
+    import.meta.env.VITE_BACKEND_URL || "https://tripday.uz" || "http://10.207.208.105:8081"
   ).replace(/\/+$/, "");
   const API_PREFIX = (import.meta.env.VITE_API_BASE_URL || "/api").replace(
     /\/+$/,
@@ -915,14 +915,14 @@ export default function HomePage() {
               >
                 <span>📍 Samarqand, O'zbekiston</span>
                 <a
-                  href="mailto:info@tripday.uz"
+                  href="mailto:tourismsamarkand@gmail.com"
                   style={{ color: "#94a3b8", textDecoration: "none" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.color = "#94a3b8")
                   }
                 >
-                  ✉️ info@tripday.uz
+                  ✉️ tourismsamarkand@gmail.com
                 </a>
                 <a
                   href="https://t.me/tripday_uz"

@@ -146,13 +146,15 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Manrope', 'DM Sans', sans-serif; letter-spacin
 
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;           /* viewport balandligi */
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  flex: 0 0 240px;        /* sidebar width reserved in flex */
-  position: relative;     /* ✅ desktopda fixed emas */
+  flex: 0 0 240px;
+  position: sticky;        /* scroll qilganda ham bir joyda turadi */
+  top: 0;
+  overflow-y: auto;        /* sidebar ichida ham scroll bo'lsa ishlaydi */
   z-index: 50;
   transition: transform 0.3s ease;
 }

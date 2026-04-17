@@ -7,7 +7,6 @@ import Shell from "@/components/Shell";
 import EditEventDialog from "@/components/EditEventDialog";
 import { toast } from "sonner";
 import {
-  LayoutDashboard,
   Building2,
   Users,
   Ticket,
@@ -17,7 +16,6 @@ import {
   Search,
   Shield,
   RefreshCw,
-  TrendingUp,
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -44,7 +42,7 @@ function toArr(d: any) {
 type Tab = "overview" | "orgs" | "events" | "users" | "tour" | "admins";
 
 export default function AdminPage() {
-  const { user, isLoading, hasRole, logout } = useAuth();
+  const { user, isLoading, hasRole } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const { t } = useTranslation();
@@ -76,7 +74,7 @@ export default function AdminPage() {
   // Reject modals
   const [rejectOrg, setRejectOrg] = useState<number | null>(null);
   const [rejectOrgReason, setRejectOrgReason] = useState("");
-  const [rejectEv, setRejectEv] = useState<number | null>(null);
+  const [rejectEv, setRejectEv] = useState<number[]>([]);
   const [rejectEvReason, setRejectEvReason] = useState("");
 
   useEffect(() => {
@@ -139,6 +137,21 @@ export default function AdminPage() {
 
   const pendingOrgs = useMemo(() => orgs.filter((o) => !o.verified), [orgs]);
   const verifiedOrgs = useMemo(() => orgs.filter((o) => o.verified), [orgs]);
+
+  // Ko'p kunlik tadbirlarni bitta guruhga birlashtirish
+  const pendingEventGroups = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    for (const ev of pendingEvents) {
+      const key = `${String(ev.title || "").trim()}__${String(ev.organizationId || "")}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(ev);
+    }
+    return [...groups.values()].map((siblings) => ({
+      representative: siblings[0],
+      allIds: siblings.map((s) => s.id),
+      count: siblings.length,
+    }));
+  }, [pendingEvents]);
 
   const items = [
     {
@@ -209,19 +222,19 @@ export default function AdminPage() {
     setRejectOrgReason("");
     load();
   };
-  const approveEv = async (id: number) => {
-    await adminSvc.approveEvent(id);
-    toast.success("Tasdiqlandi");
+  const approveEv = async (ids: number[]) => {
+    await Promise.all(ids.map((id) => adminSvc.approveEvent(id)));
+    toast.success(ids.length > 1 ? `${ids.length} ta kun tasdiqlandi ✅` : "Tasdiqlandi ✅");
     load();
   };
   const doRejectEv = async () => {
-    if (!rejectEv || !rejectEvReason.trim()) {
+    if (!rejectEv.length || !rejectEvReason.trim()) {
       toast.error("Sabab kiriting");
       return;
     }
-    await adminSvc.rejectEvent(rejectEv, rejectEvReason);
-    toast.success("Rad etildi");
-    setRejectEv(null);
+    await Promise.all(rejectEv.map((id) => adminSvc.rejectEvent(id, rejectEvReason)));
+    toast.success(rejectEv.length > 1 ? `${rejectEv.length} ta kun rad etildi` : "Rad etildi");
+    setRejectEv([]);
     setRejectEvReason("");
     load();
   };
@@ -361,7 +374,7 @@ export default function AdminPage() {
 
   return (
     <Shell items={items} title={label}>
-      <div style={{ padding: "28px 28px", minHeight: "0" }}>
+      <div style={{ padding: "16px", minHeight: "0" }} className="sm:p-7">
         {/* Header */}
         <div
           style={{
@@ -666,32 +679,36 @@ export default function AdminPage() {
             )}
 
             {/* Pending events quick */}
-            {pendingEvents.length > 0 && (
-              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 text-sky-50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:bg-black hover:from-black hover:via-black hover:to-black hover:shadow-2xl">
+            {pendingEventGroups.length > 0 && (
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 text-sky-50 shadow-lg">
                 {/* header */}
                 <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
                   <Clock size={15} color="#f06292" />
                   <span className="font-bold text-[15px] text-sky-50">
                     Tasdiqlanmagan tadbirlar
                   </span>
-
                   <span className="ml-auto inline-flex items-center justify-center rounded-full bg-rose-400/15 text-rose-100 border border-rose-300/20 px-2.5 py-1 text-xs font-semibold">
-                    {pendingEvents.length}
+                    {pendingEventGroups.length}
                   </span>
                 </div>
 
-                {/* rows */}
-                {pendingEvents.slice(0, 5).map((ev) => (
+                {/* rows — guruhlangan */}
+                {pendingEventGroups.slice(0, 5).map((group) => (
                   <div
-                    key={ev.id}
+                    key={group.representative.id}
                     className="px-5 py-3.5 border-b border-white/10 last:border-b-0 flex items-center gap-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-[14px] font-semibold text-sky-50 truncate">
-                        {ev.title}
+                      <div className="text-[14px] font-semibold text-sky-50 truncate flex items-center gap-2">
+                        {group.representative.title}
+                        {group.count > 1 && (
+                          <span className="inline-flex items-center rounded-full bg-amber-400/20 border border-amber-300/30 px-2 py-0.5 text-[11px] font-bold text-amber-200">
+                            {group.count} kun
+                          </span>
+                        )}
                       </div>
                       <div className="text-[12px] text-sky-100/80 truncate">
-                        {ev.locationName}
+                        {group.representative.locationName}
                       </div>
                     </div>
 
@@ -700,7 +717,7 @@ export default function AdminPage() {
                         className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold
                            bg-emerald-400/15 text-emerald-100 border border-emerald-300/20
                            hover:bg-emerald-400/25 hover:border-emerald-200/40 transition"
-                        onClick={() => approveEv(ev.id)}
+                        onClick={() => approveEv(group.allIds)}
                       >
                         <CheckCircle size={13} />
                         Tasdiqlash
@@ -711,7 +728,7 @@ export default function AdminPage() {
                            bg-rose-400/15 text-rose-100 border border-rose-300/20
                            hover:bg-rose-400/25 hover:border-rose-200/40 transition"
                         onClick={() => {
-                          setRejectEv(ev.id);
+                          setRejectEv(group.allIds);
                           setRejectEvReason("");
                         }}
                       >
@@ -958,164 +975,131 @@ export default function AdminPage() {
         )}
 
         {/* EVENTS */}
-        {tab === "events" && (
-          <div className="anim-in">
-            {/* Stats */}
-            <div className="mb-4">
-              <div className="flex gap-3 mb-3">
-                <span
-                  className="inline-flex items-center rounded-full 
-                         bg-rose-400/15 text-rose-200 
-                         border border-rose-300/20 
-                         px-3 py-1 text-xs font-semibold"
-                >
-                  {pendingEvents.length} kutilmoqda
-                </span>
+        {tab === "events" && (() => {
+          // Barcha eventlarni title+organizationId bo'yicha guruhlaymiz
+          const allEventsMap = new Map<string, any[]>();
+          const combined = [
+            ...pendingEvents,
+            ...events.filter((ev) => !pendingEvents.some((p) => p.id === ev.id)),
+          ];
+          for (const ev of combined) {
+            const key = `${String(ev.title || "").trim()}__${String(ev.organizationId || "")}`;
+            if (!allEventsMap.has(key)) allEventsMap.set(key, []);
+            allEventsMap.get(key)!.push(ev);
+          }
+          const groupedEvents = [...allEventsMap.values()].map((siblings) => {
+            const rep = siblings[0];
+            const pendingIds = siblings
+              .filter((s) => pendingEvents.some((p) => p.id === s.id))
+              .map((s) => s.id);
+            const isPending = pendingIds.length > 0;
+            const allIds = siblings.map((s) => s.id);
+            return { rep, siblings, pendingIds, allIds, isPending, count: siblings.length };
+          });
 
-                <span
-                  className="inline-flex items-center rounded-full 
-                         bg-sky-400/15 text-sky-200 
-                         border border-sky-300/20 
-                         px-3 py-1 text-xs font-semibold"
-                >
-                  {events.length} jami
+          return (
+            <div className="anim-in">
+              {/* Stats */}
+              <div className="mb-4 flex gap-3">
+                <span className="inline-flex items-center rounded-full bg-rose-400/15 text-rose-200 border border-rose-300/20 px-3 py-1 text-xs font-semibold">
+                  {pendingEventGroups.length} kutilmoqda
+                </span>
+                <span className="inline-flex items-center rounded-full bg-sky-400/15 text-sky-200 border border-sky-300/20 px-3 py-1 text-xs font-semibold">
+                  {groupedEvents.length} jami
                 </span>
               </div>
-            </div>
 
-            {/* Table Card */}
-            <div
-              className="overflow-hidden rounded-2xl border border-white/10 
-                    bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 
-                    text-sky-50 shadow-lg
-                    transition-all duration-300
-                    hover:-translate-y-1
-                    hover:bg-black hover:from-black hover:via-black hover:to-black
-                    hover:shadow-2xl"
-            >
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  {/* Header */}
-                  <thead className="bg-white/5 text-sky-100 uppercase text-xs tracking-wider">
-                    <tr>
-                      <th className="px-5 py-4 text-left">Nomi</th>
-                      <th className="px-5 py-4 text-left">Sana</th>
-                      <th className="px-5 py-4 text-left">Manzil</th>
-                      <th className="px-5 py-4 text-left">Holat</th>
-                      <th className="px-5 py-4 text-left">Amallar</th>
-                    </tr>
-                  </thead>
-
-                  {/* Body */}
-                  <tbody className="divide-y divide-white/10">
-                    {[
-                      ...pendingEvents,
-                      ...events.filter(
-                        (ev) => !pendingEvents.some((p) => p.id === ev.id),
-                      ),
-                    ]
-                      .slice(0, 30)
-                      .map((ev) => {
-                        const isPending = pendingEvents.some(
-                          (p) => p.id === ev.id,
-                        );
-                        const d = new Date(ev.eventDateTime);
-
+              {/* Table */}
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 text-sky-50 shadow-lg">
+                <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+                  <table className="min-w-[600px] w-full text-sm">
+                    <thead className="bg-white/5 text-sky-100 uppercase text-xs tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Nomi</th>
+                        <th className="px-4 py-3 text-left">Sana</th>
+                        <th className="px-4 py-3 text-left hidden sm:table-cell">Manzil</th>
+                        <th className="px-4 py-3 text-left">Holat</th>
+                        <th className="px-4 py-3 text-left">Amallar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {groupedEvents.slice(0, 30).map((group) => {
+                        const d = new Date(group.rep.eventDateTime);
                         return (
-                          <tr
-                            key={ev.id}
-                            className="hover:bg-white/5 transition"
-                          >
-                            <td className="px-5 py-3 font-semibold text-sky-50 max-w-[220px] truncate">
-                              {ev.title}
+                          <tr key={group.rep.id} className="hover:bg-white/5 transition">
+                            {/* Nomi + kun badge */}
+                            <td className="px-4 py-3 font-semibold text-sky-50 max-w-[160px]">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="truncate max-w-[120px]">{group.rep.title}</span>
+                                {group.count > 1 && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-400/20 border border-amber-300/30 px-1.5 py-0.5 text-[10px] font-bold text-amber-200 whitespace-nowrap">
+                                    {group.count} kun
+                                  </span>
+                                )}
+                              </div>
                             </td>
 
-                            <td className="px-5 py-3 text-xs text-sky-200/70 whitespace-nowrap">
-                              {isNaN(d.getTime())
-                                ? "—"
-                                : format(d, "dd MMM yyyy")}
+                            {/* Sana */}
+                            <td className="px-4 py-3 text-xs text-sky-200/70 whitespace-nowrap">
+                              {isNaN(d.getTime()) ? "—" : format(d, "dd MMM yy")}
                             </td>
 
-                            <td className="px-5 py-3 text-xs text-sky-200/70 max-w-[180px] truncate">
-                              {ev.locationName}
+                            {/* Manzil — kichik ekranda yashiriladi */}
+                            <td className="px-4 py-3 text-xs text-sky-200/70 max-w-[130px] truncate hidden sm:table-cell">
+                              {group.rep.locationName}
                             </td>
 
-                            <td className="px-5 py-3">
-                              {isPending ? (
-                                <span
-                                  className="inline-flex items-center rounded-full 
-                                         bg-yellow-400/15 text-yellow-200 
-                                         border border-yellow-300/20 
-                                         px-2.5 py-1 text-xs font-semibold"
-                                >
+                            {/* Holat */}
+                            <td className="px-4 py-3">
+                              {group.isPending ? (
+                                <span className="inline-flex items-center rounded-full bg-yellow-400/15 text-yellow-200 border border-yellow-300/20 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap">
                                   Kutilmoqda
                                 </span>
                               ) : (
-                                <span
-                                  className="inline-flex items-center rounded-full 
-                                         bg-emerald-400/15 text-emerald-200 
-                                         border border-emerald-300/20 
-                                         px-2.5 py-1 text-xs font-semibold"
-                                >
+                                <span className="inline-flex items-center rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/20 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap">
                                   Tasdiqlangan
                                 </span>
                               )}
                             </td>
 
-                            <td className="px-5 py-3">
-                              <div className="flex gap-2 items-center">
+                            {/* Amallar */}
+                            <td className="px-4 py-3">
+                              <div className="flex gap-1.5 items-center flex-wrap">
                                 <Link
-                                  to={`${base}/events/${ev.id}`}
-                                  className="inline-flex items-center justify-center
-                                     rounded-lg px-3 py-2 text-xs font-semibold
-                                     bg-white/10 text-white
-                                     border border-white/20
-                                     hover:bg-white/20 transition"
+                                  to={`${base}/events/${group.rep.id}`}
+                                  className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition"
                                 >
                                   Ko'rish
                                 </Link>
 
                                 <EditEventDialog
-                                  event={ev}
+                                  event={group.rep}
                                   onSave={updateEvent}
                                   triggerVariant="icon"
                                 />
 
                                 <button
-                                  className="inline-flex items-center justify-center
-                                     rounded-lg px-3 py-2 text-xs font-semibold
-                                     bg-rose-400/15 text-rose-100
-                                     border border-rose-300/20
-                                     hover:bg-rose-400/25 transition"
-                                  onClick={() => deleteEv(ev.id)}
+                                  className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-rose-400/15 text-rose-100 border border-rose-300/20 hover:bg-rose-400/25 transition"
+                                  onClick={() => deleteEv(group.rep.id)}
                                   title="O'chirish"
                                 >
                                   <Trash2 size={12} />
                                 </button>
 
-                                {isPending && (
+                                {group.isPending && (
                                   <>
                                     <button
-                                      className="inline-flex items-center justify-center
-                                         rounded-lg px-3 py-2 text-xs font-semibold
-                                         bg-emerald-400/15 text-emerald-100
-                                         border border-emerald-300/20
-                                         hover:bg-emerald-400/25 transition"
-                                      onClick={() => approveEv(ev.id)}
+                                      className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-emerald-400/15 text-emerald-100 border border-emerald-300/20 hover:bg-emerald-400/25 transition"
+                                      onClick={() => approveEv(group.pendingIds)}
+                                      title={group.count > 1 ? `${group.count} kunni tasdiqlash` : "Tasdiqlash"}
                                     >
                                       <CheckCircle size={12} />
                                     </button>
 
                                     <button
-                                      className="inline-flex items-center justify-center
-                                         rounded-lg px-3 py-2 text-xs font-semibold
-                                         bg-rose-400/15 text-rose-100
-                                         border border-rose-300/20
-                                         hover:bg-rose-400/25 transition"
-                                      onClick={() => {
-                                        setRejectEv(ev.id);
-                                        setRejectEvReason("");
-                                      }}
+                                      className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-rose-400/15 text-rose-100 border border-rose-300/20 hover:bg-rose-400/25 transition"
+                                      onClick={() => { setRejectEv(group.pendingIds); setRejectEvReason(""); }}
+                                      title={group.count > 1 ? `${group.count} kunni rad etish` : "Rad etish"}
                                     >
                                       <XCircle size={12} />
                                     </button>
@@ -1126,12 +1110,13 @@ export default function AdminPage() {
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* USERS */}
         {tab === "users" && (
@@ -1351,11 +1336,11 @@ export default function AdminPage() {
       )}
 
       {/* Reject Event Modal */}
-      {rejectEv !== null && (
+      {rejectEv.length > 0 && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center
                bg-black/60 backdrop-blur-sm"
-          onClick={() => setRejectEv(null)}
+          onClick={() => setRejectEv([])}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1391,7 +1376,7 @@ export default function AdminPage() {
               </button>
 
               <button
-                onClick={() => setRejectEv(null)}
+                onClick={() => setRejectEv([])}
                 className="rounded-xl px-4 py-2.5 text-sm font-semibold
                      bg-white/10 text-white
                      border border-white/20

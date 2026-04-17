@@ -180,7 +180,7 @@ export default function Shell({ items, title, children }: Props) {
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", alignItems: "flex-start" }}>
       {/* Overlay (mobile) */}
       <div
         className={`shell-overlay${open ? " open" : ""}`}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { orgsSvc, eventsSvc, registrationsApi } from "@/lib/api";
@@ -14,8 +14,9 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { format } from "date-fns";
+import { deduplicateEvents } from "@/lib/event-utils";
 
-import CreateEventDialog from "@/components/CreateEventDialog"; // o'zingdagi pathga mos
+import CreateEventDialog from "@/components/CreateEventDialog";
 import EditEventDialog from "@/components/EditEventDialog";
 import RegistrationsDialog from "@/components/RegistrationsDialog";
 
@@ -145,6 +146,9 @@ export default function DashboardPage() {
     await load();
   };
 
+  // Ko'p kunlik tadbirlarni bitta guruhga birlashtirish
+  const groupedEvents = useMemo(() => deduplicateEvents(events), [events]);
+
   const loadRegs = async (eventId: number) => {
     const res = await registrationsApi.getAll();
     const all = Array.isArray(res.data) ? res.data : [];
@@ -163,7 +167,7 @@ export default function DashboardPage() {
 
   return (
     <Shell items={items} title="Dashboard">
-      <div style={{ padding: "28px", minHeight: "100vh" }}>
+      <div style={{ padding: "16px", minHeight: "100vh" }} className="sm:p-7">
         <div
           style={{
             display: "flex",
@@ -238,40 +242,46 @@ export default function DashboardPage() {
           <div
             className="card anim-up"
             style={{
-              padding: "20px 22px",
+              padding: "16px 18px",
               marginBottom: 24,
               display: "flex",
-              gap: 16,
+              gap: 12,
               alignItems: "center",
+              flexWrap: "wrap",
             }}
           >
+            {/* Avatar */}
             <div
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background:
-                  "linear-gradient(135deg,var(--accent),var(--accent2))",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "linear-gradient(135deg,var(--accent),var(--accent2))",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: "Syne,sans-serif",
                 fontWeight: 800,
-                fontSize: 20,
+                fontSize: 18,
                 color: "#fff",
                 flexShrink: 0,
               }}
             >
               {(org.name || "O")[0].toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
+
+            {/* Info */}
+            <div style={{ flex: "1 1 120px", minWidth: 0 }}>
               <div
                 style={{
                   fontFamily: "Syne,sans-serif",
                   fontWeight: 700,
-                  fontSize: 16,
+                  fontSize: 15,
                   color: "var(--text)",
-                  marginBottom: 4,
+                  marginBottom: 2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {org.name}
@@ -280,15 +290,17 @@ export default function DashboardPage() {
                 {org.address}
               </div>
             </div>
+
+            {/* Badge */}
             {org.verified ? (
-              <span className="tag tag-green">
+              <span className="tag tag-green" style={{ flexShrink: 0 }}>
                 <CheckCircle size={11} />
                 Tasdiqlangan
               </span>
             ) : (
-              <span className="tag tag-yellow">
+              <span className="tag tag-yellow" style={{ flexShrink: 0, fontSize: 11 }}>
                 <Clock size={11} />
-                Admin tasdiqlashi kutilmoqda
+                Kutilmoqda
               </span>
             )}
           </div>
@@ -427,7 +439,7 @@ export default function DashboardPage() {
               <p>Hali tadbir yo'q</p>
             </div>
           ) : (
-            events.map((ev) => {
+            groupedEvents.map((ev) => {
               const d = new Date(ev.eventDateTime);
               const s = String(ev.status || "").toUpperCase();
               const approved =
@@ -437,67 +449,71 @@ export default function DashboardPage() {
                 <div
                   key={ev.id}
                   style={{
-                    padding: "16px 20px",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    padding: "14px 20px",
+                    borderBottom: "1px solid rgba(15,23,42,0.07)",
                     display: "flex",
-                    gap: 12,
-                    alignItems: "center",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Title + meta */}
+                  <div style={{ flex: "1 1 160px", minWidth: 0 }}>
                     <div
                       style={{
                         fontWeight: 600,
                         fontSize: 14,
                         color: "var(--text)",
-                        marginBottom: 4,
+                        marginBottom: 3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {ev.title}
                     </div>
                     <div
                       style={{
-                        fontSize: 12,
+                        fontSize: 11,
                         color: "var(--text-muted)",
                         display: "flex",
-                        gap: 12,
+                        gap: 8,
+                        flexWrap: "wrap",
                       }}
                     >
                       {!isNaN(d.getTime()) && (
-                        <span>
-                          <CalendarDays
-                            size={11}
-                            style={{
-                              display: "inline",
-                              verticalAlign: "middle",
-                              marginRight: 3,
-                            }}
-                          />
+                        <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <CalendarDays size={10} />
                           {format(d, "dd MMM yyyy")}
                         </span>
                       )}
-                      <span>{ev.locationName}</span>
+                      {ev.locationName && (
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+                          {ev.locationName}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <span
-                    className={`tag ${approved ? "tag-green" : "tag-yellow"}`}
-                    style={{ whiteSpace: "nowrap", fontSize: 10 }}
-                  >
-                    {approved ? "Tasdiqlangan" : "Kutilmoqda"}
-                  </span>
+                  {/* Status + tugmalar */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
+                    <span
+                      className={`tag ${approved ? "tag-green" : "tag-yellow"}`}
+                      style={{ fontSize: 10, whiteSpace: "nowrap" }}
+                    >
+                      {approved ? "Tasdiqlangan" : "Kutilmoqda"}
+                    </span>
 
-                  <div style={{ display: "flex", gap: 6 }}>
                     <Link
                       to={`/events/${ev.id}`}
                       className="btn btn-ghost btn-sm"
-                      style={{ textDecoration: "none", padding: "6px 10px" }}
+                      style={{ textDecoration: "none", padding: "5px 8px" }}
                     >
                       <Eye size={13} />
                     </Link>
 
                     <EditEventDialog
-                      event={ev}
+                      event={ev as any}
                       onSave={updateEvent}
                       disabled={!org?.verified}
                       triggerVariant="icon"
@@ -512,7 +528,7 @@ export default function DashboardPage() {
 
                     <button
                       className="btn btn-danger btn-sm"
-                      style={{ padding: "6px 10px" }}
+                      style={{ padding: "5px 8px" }}
                       onClick={() => deleteEvent(ev.id)}
                     >
                       <Trash2 size={13} />

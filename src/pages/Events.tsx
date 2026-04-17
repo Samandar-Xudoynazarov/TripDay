@@ -42,7 +42,7 @@ export default function EventsPage() {
     ],
   });
 
-  const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz";
+  const ORIGIN = import.meta.env.VITE_BACKEND_URL || "https://tripday.uz" || "http://10.207.208.105:8081";
   const API_PREFIX = import.meta.env.VITE_API_BASE_URL || "/api";
   const apiUrl = (p: string) =>
     `${ORIGIN}${API_PREFIX}${p.startsWith("/") ? "" : "/"}${p}`;
