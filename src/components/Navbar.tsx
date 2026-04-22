@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth";
 import { eventsSvc } from "@/lib/api";
 import {
   getEventDate,
-  getEventDateValue,
   isUpcomingEvent,
   sortByEventDate,
 } from "@/lib/event-utils";

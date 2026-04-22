@@ -175,7 +175,16 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [heroImages.length]);
 
-  const top = events.slice(0, 6);
+  const top = useMemo(() => {
+    const now = Date.now();
+    return events
+      .filter((ev) => {
+        const d = getEventDate(ev);
+        return d ? d.getTime() >= now : false;
+      })
+      .sort((a, b) => +(getEventDate(a) || 0) - +(getEventDate(b) || 0))
+      .slice(0, 6);
+  }, [events]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
 
@@ -400,7 +409,10 @@ export default function HomePage() {
           >
             {top.map((ev, i) => {
               const d = getEventDate(ev) || new Date();
-              const cover = covers[Number(ev.id)] || "";
+              const cover =
+                covers[Number(ev.id)] ||
+                (ev._siblings || []).map((s: any) => covers[Number(s.id)]).find(Boolean) ||
+                "";
               const isMultiDay = (ev._siblings?.length ?? 1) > 1;
 
               return (

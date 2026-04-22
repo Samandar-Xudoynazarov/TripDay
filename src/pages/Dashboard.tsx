@@ -133,16 +133,18 @@ export default function DashboardPage() {
     }
   };
 
-  const deleteEvent = async (id: number) => {
-    if (!confirm("Tadbirni o'chirasizmi?")) return;
-    await eventsSvc.delete(id);
-    setEvents((p) => p.filter((e) => e.id !== id));
-    toast.success("O'chirildi");
+  const deleteEvent = async (ids: number[]) => {
+    const label = ids.length > 1 ? `${ids.length} kunlik tadbirni` : "Tadbirni";
+    if (!confirm(`${label} o'chirasizmi?`)) return;
+    await Promise.all(ids.map((id) => eventsSvc.delete(id)));
+    setEvents((p) => p.filter((e) => !ids.includes(e.id)));
+    toast.success(ids.length > 1 ? `${ids.length} kun o'chirildi` : "O'chirildi");
   };
 
-  const updateEvent = async (eventId: number, payload: any) => {
-    await eventsSvc.update(eventId, payload);
-    toast.success("Saqlangan");
+  const updateEvent = async (eventId: number, payload: any, siblingIds?: number[]) => {
+    const ids = siblingIds && siblingIds.length > 1 ? siblingIds : [eventId];
+    await Promise.all(ids.map((id) => eventsSvc.update(id, payload)));
+    toast.success(ids.length > 1 ? `${ids.length} kun yangilandi` : "Saqlangan");
     await load();
   };
 
@@ -514,7 +516,7 @@ export default function DashboardPage() {
 
                     <EditEventDialog
                       event={ev as any}
-                      onSave={updateEvent}
+                      onSave={(id, payload) => updateEvent(id, payload, (ev._siblings || []).map((s: any) => s.id))}
                       disabled={!org?.verified}
                       triggerVariant="icon"
                     />
@@ -529,7 +531,7 @@ export default function DashboardPage() {
                     <button
                       className="btn btn-danger btn-sm"
                       style={{ padding: "5px 8px" }}
-                      onClick={() => deleteEvent(ev.id)}
+                      onClick={() => deleteEvent((ev._siblings || [{ id: ev.id }]).map((s: any) => s.id))}
                     >
                       <Trash2 size={13} />
                     </button>

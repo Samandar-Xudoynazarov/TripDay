@@ -239,14 +239,15 @@ export default function AdminPage() {
     load();
   };
 
-  const deleteEv = async (id: number) => {
-    if (!confirm("Eventni butunlay o‘chirishni xohlaysizmi?")) return;
+  const deleteEv = async (ids: number[]) => {
+    const label = ids.length > 1 ? `${ids.length} kunlik tadbirni` : "Tadbirni";
+    if (!confirm(`${label} butunlay o’chirishni xohlaysizmi?`)) return;
     try {
-      await eventsSvc.delete(id);
-      toast.success("Event o‘chirildi");
+      await Promise.all(ids.map((id) => eventsSvc.delete(id)));
+      toast.success(ids.length > 1 ? `${ids.length} kun o’chirildi` : "O’chirildi");
       load();
     } catch {
-      toast.error("Eventni o‘chirib bo‘lmadi");
+      toast.error("O’chirib bo’lmadi");
     }
   };
   const makeAdmin = async (uid: number) => {
@@ -262,13 +263,14 @@ export default function AdminPage() {
     load();
   };
 
-  const updateEvent = async (eventId: number, payload: any) => {
+  const updateEvent = async (eventId: number, payload: any, siblingIds?: number[]) => {
     try {
-      await eventsSvc.update(eventId, payload);
-      toast.success("Event yangilandi");
+      const ids = siblingIds && siblingIds.length > 1 ? siblingIds : [eventId];
+      await Promise.all(ids.map((id) => eventsSvc.update(id, payload)));
+      toast.success(ids.length > 1 ? `${ids.length} kun yangilandi` : "Yangilandi");
       await load();
     } catch {
-      toast.error("Eventni yangilab bo'lmadi");
+      toast.error("Yangilab bo'lmadi");
       throw new Error("Event update failed");
     }
   };
@@ -1074,13 +1076,13 @@ export default function AdminPage() {
 
                                 <EditEventDialog
                                   event={group.rep}
-                                  onSave={updateEvent}
+                                  onSave={(id, payload) => updateEvent(id, payload, group.allIds)}
                                   triggerVariant="icon"
                                 />
 
                                 <button
                                   className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-rose-400/15 text-rose-100 border border-rose-300/20 hover:bg-rose-400/25 transition"
-                                  onClick={() => deleteEv(group.rep.id)}
+                                  onClick={() => deleteEv(group.allIds)}
                                   title="O'chirish"
                                 >
                                   <Trash2 size={12} />

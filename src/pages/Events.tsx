@@ -112,7 +112,8 @@ export default function EventsPage() {
     const base = isAdmin || isOrg ? all : all.filter(statusOk);
     const now = Date.now();
     const upcoming = base.filter((ev) => isUpcomingEvent(ev, now));
-    return deduplicateEvents(upcoming);
+    const deduped = deduplicateEvents(upcoming);
+    return deduped.sort((a, b) => +(getEventDate(a) || 0) - +(getEventDate(b) || 0));
   }, [all, isAdmin, isOrg]);
 
   const filtered = useMemo(() => {
@@ -294,7 +295,10 @@ export default function EventsPage() {
           >
             {filtered.map((ev, i) => {
               const d = getEventDate(ev) || new Date();
-              const coverPath = covers[Number(ev.id)];
+              const coverPath =
+                covers[Number(ev.id)] ||
+                (ev._siblings || []).map((s: any) => covers[Number(s.id)]).find(Boolean) ||
+                "";
               const coverUrl = coverPath ? fileUrl(coverPath) : "";
               const isMultiDay =
                 Array.isArray(ev._siblings) && ev._siblings.length > 1;

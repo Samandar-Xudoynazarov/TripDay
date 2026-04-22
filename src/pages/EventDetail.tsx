@@ -95,7 +95,6 @@ export default function EventDetailPage() {
       .getAll()
       .then((all: any[]) => {
         const arr = Array.isArray(all) ? all : [];
-        // Shu eventga tegishli guruhni topamiz
         const deduplicated = deduplicateEvents(arr);
         const group = deduplicated.find((g) =>
           g._siblings?.some((s: any) => Number(s.id) === eventId),
@@ -108,6 +107,26 @@ export default function EventDetailPage() {
       })
       .catch(() => setSiblings([]));
   }, [ev, eventId]);
+
+  // Agar joriy event rasmsiz bo'lsa — siblinglardan rasm qidirish
+  useEffect(() => {
+    if (images.length > 0 || siblings.length === 0) return;
+    let alive = true;
+    (async () => {
+      for (const sib of siblings) {
+        if (Number(sib.id) === eventId) continue;
+        try {
+          const r = await fetch(apiUrl(`/events/${sib.id}/images`));
+          const imgs = r.ok ? await r.json() : [];
+          if (alive && Array.isArray(imgs) && imgs.length > 0) {
+            setImages(imgs.map(String));
+            break;
+          }
+        } catch { /* ignore */ }
+      }
+    })();
+    return () => { alive = false; };
+  }, [siblings, images.length]);
 
   useEffect(() => {
     if (!eventId) return;
